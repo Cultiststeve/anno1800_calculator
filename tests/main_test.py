@@ -7,7 +7,7 @@ import main
 
 @pytest.fixture()
 def example_island():
-    example_island = main.Island(name="england", fertility=set())
+    example_island = main.Island(name="england", fertility={})
     return example_island
 
 
@@ -23,6 +23,7 @@ def test_add_to_pop(example_island):
     assert example_island.population["farmers"] == 50
     example_island.population["farmers"] += 25
     assert example_island.population["farmers"] == 75
+
 
 def test_all_buildings_in_required(example_island):
     required = example_island.required_production_buildings()
@@ -75,11 +76,12 @@ def test_residence_numbers(example_island, population):
 
 # Number schnapps (potato always == schnapps)
 @pytest.mark.parametrize("example_numbers", [1, 1.1, 2, 4, 8, 32, 32.1, 65])
-def test_calculate_requirements_schnapps(example_numbers):
+def test_calculate_requirements_schnapps(example_island, example_numbers):
+    example_island.fertility = {"potato": None}
     existing = {}
     for building_name in main.CONSUMABLES_BUILDINGS:
         existing[building_name] = 0
-    res = main.calculate_requirements(building_name="schnapps", building_number=example_numbers, existing_buildings=existing)
+    res = example_island._calculate_requirements(building_name="schnapps", building_number=example_numbers, existing_buildings=existing)
     assert res["potato"] == example_numbers
 
 
@@ -94,6 +96,7 @@ def test_producer_chain_schnapps(example_island, example_farmer_number):
 # num workers, num bakerys, num flours,
 @pytest.mark.parametrize("example_numbers", [[1, 1, 1], [2199, 2, 1], [2200, 2, 1], [2201, 3, 2]])
 def test_bread_chain(example_island, example_numbers):
+    example_island.fertility = {"grain": None}
     example_island.population["workers"] = example_numbers[0]
     res = example_island.required_production_buildings()
     assert math.ceil(res["bakery"]) == example_numbers[1]
@@ -111,8 +114,30 @@ def test_sawmill(example_island, example_numbers):
 # number workers, number pig farms, number slaughterhouses, num soap factories
 @pytest.mark.parametrize("example_numbers", [[1, 1, 1, 1], [4800, 7, 5, 1]])
 def test_sausages_and_soap(example_island, example_numbers):
+    example_island.fertility = {"grain": None}
     example_island.population["workers"] = example_numbers[0]
     res = example_island.required_production_buildings()
     assert math.ceil(res["pig"]) == example_numbers[1]
     assert math.ceil(res["slaughters"]) == example_numbers[2]
     assert math.ceil(res["soap"]) == example_numbers[3]
+
+
+@pytest.mark.parametrize("example_fertility", [{},
+                                               {"iron_mine": 5, "coal_mine": 1},
+                                               {"potato": None},
+                                               {"grain": 5},
+                                               {"peppers": 55}])
+def test_fertilities(example_fertility):
+    fertile_island = main.Island(name="fertile", fertility=example_fertility)
+
+
+def test_no_fertility_farmers(example_island):
+    example_island.population["farmers"] = 1
+    with pytest.raises(main.NoFertility):
+        example_island.required_production_buildings()
+
+
+def test_no_fertility_workers(example_island):
+    example_island.population["workers"] = 1
+    with pytest.raises(main.NoFertility):
+        example_island.required_production_buildings()
