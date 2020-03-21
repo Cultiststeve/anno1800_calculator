@@ -78,10 +78,13 @@ COAL_MINE = ProductionBuilding(name="coal_mine",
                                needs_fertility="coal_mine")
 CHARCOAL_KILN = ProductionBuilding(name="charcoal_kiln")
 FURNACE = ProductionBuilding(name="furnace",
-                             requires={"charcoal": {"coal_mine": .5, "charcoal_kiln": 1}, "iron": .5}
+                             requires={"charcoal": {"coal_mine": .5, "charcoal_kiln": 1},
+                                       "iron_mine": .5}
                              )
 STEEL_WORKS = ProductionBuilding(name="steel_works",
-                                 requires={"furnace": 3 / 2})
+                                 requires={"furnace": 2/3})
+WEAPONS = ProductionBuilding(name="weapons",
+                             requires={"furnace": 2/6})
 
 CONSUMABLES_BUILDINGS = {"fishery": FISHERY,
                          "potato": POTATO,
@@ -102,19 +105,17 @@ CONSUMABLES_BUILDINGS = {"fishery": FISHERY,
                          "charcoal_kiln": CHARCOAL_KILN,
                          "furnace": FURNACE}
 
-CONSTRUCTION_RES_BUILDING = {"sawmill": SAWMILL,
+CONSTRUCTION_MATERIAL_BUILDINGS = {"sawmill": SAWMILL,
                              "brick": BRICK,
                              "sailmaker": SAIL_MAKER,
                              "steel_works": STEEL_WORKS}
 
 ALL_BUILDINGS = {}
 ALL_BUILDINGS.update(CONSUMABLES_BUILDINGS)
-ALL_BUILDINGS.update(CONSTRUCTION_RES_BUILDING)
+ALL_BUILDINGS.update(CONSTRUCTION_MATERIAL_BUILDINGS)
 
-NATURAL_RESOURCES = ["coal_mine", "iron_mine", "clay",
+NATURAL_RESOURCES = ["coal_mine", "iron_mine", "clay", "copper_mine",
                      "hops", "grain", "potato", "peppers", "furs", "saltpeter", "grapes"]
-
-
 
 
 class Island:
@@ -128,9 +129,12 @@ class Island:
         """
         self.name = name
         for item in fertility:
-            assert item in NATURAL_RESOURCES
             try:
-                assert fertility[item] > 0
+                assert item in NATURAL_RESOURCES
+            except AssertionError:
+                raise AssertionError(f"{item} not in {NATURAL_RESOURCES}.")
+            try:
+                assert fertility[item] >= 0
             except TypeError:
                 assert fertility[item] is None
         self.fertility = fertility
@@ -138,46 +142,74 @@ class Island:
         self.population = {}
         for pop in POPULATION_RESIDENCES:
             self.population[pop] = 0
-        self.constuction_res_building = {}
-        for building_type in CONSTRUCTION_RES_BUILDING:
-            self.constuction_res_building[building_type] = 0
+        self.requested_construction_buildings = {}
+        for building_type in CONSTRUCTION_MATERIAL_BUILDINGS:
+            self.requested_construction_buildings[building_type] = 0
 
-    def required_production_buildings(self) -> dict:
+        self.required_buildings = {}
+        for building in ALL_BUILDINGS:
+            self.required_buildings[building] = 0
+
+    def calculate_required_production_buildings(self) -> dict:
         """
 
         Returns: actual building numbers required
             (can be floats)
 
         """
-        results = {}
-        for building in CONSUMABLES_BUILDINGS:
-            results[building] = 0
-        for building in CONSTRUCTION_RES_BUILDING:
-            results[building] = 0
-
         # For each consumable building
         for building in CONSUMABLES_BUILDINGS.values():
             # for each consumer
             for consumer in building.consumers.keys():
                 if self.population[consumer] == 0:
-                    continue
-                # calculate how many buildings needed to satisfy the population
-                buildings_required = self.population[consumer] / building.consumers[consumer]
-                assert buildings_required >= 0
-                if buildings_required > 0:
-                    results[building.name] += buildings_required
-                    # Calculate how many chain buildings needed to feed end of chain
-                    self._calculate_requirements(building.name, buildings_required, results)
+                    continue  # No need to do any calculations if no pop on this island
+
+                number_required = self.population[consumer] / building.consumers[consumer]
+                self.add_required_building(building_required=building.name, number_required=number_required)
+
 
         # for each construction resource building
-        for building in CONSTRUCTION_RES_BUILDING:
-            assert self.constuction_res_building[building] >= 0
-            if self.constuction_res_building[building] == 0:
-                continue
-            results[building] += self.constuction_res_building[building]
-            self._calculate_requirements(building, self.constuction_res_building[building], results)
+        for building in CONSTRUCTION_MATERIAL_BUILDINGS:
+            assert self.requested_construction_buildings[building] >= 0
+            if self.requested_construction_buildings[building] == 0:
+                continue  # If we dont want any of this type on island
+            self.add_required_building(building, self.requested_construction_buildings[building])
 
-        return results
+    def add_required_building(self, building_required: str, number_required: float):
+        # calculate how many buildings needed to satisfy the population
+        assert building_required in ALL_BUILDINGS.keys()
+        assert number_required > 0
+
+        if ALL_BUILDINGS[building_required].needs_fertility is not None:  # If building has a fertility requirement
+            needed_fertility = ALL_BUILDINGS[building_required].needs_fertility
+            assert needed_fertility in self.fertility
+            if self.fertility[needed_fertility] is not None:
+                self.fertility[needed_fertility] -= number_required  # Reduce available amount
+                if self.fertility[needed_fertility] < 0:
+                    raise NoFertility(f"{self.name} requires more {needed_fertility} but none are available.")
+
+        # Add required providers
+        for requirement_type in ALL_BUILDINGS[building_required].requires:
+            if type(ALL_BUILDINGS[building_required].requires[requirement_type]) is dict:
+                for requirement_provider_building in ALL_BUILDINGS[building_required].requires[requirement_type]:
+                    # For each possible provider of the requirement
+                    # Check if fertility supports it (if it has a fert requirement)
+
+                    if ALL_BUILDINGS[requirement_provider_building].needs_fertility is not None \
+                        and self.fertility[requirement_provider_building] == 0:
+                        continue  # No fertility for this building, try next possible provider
+                    else:
+                        number_provider_required = number_required * ALL_BUILDINGS[building_required].requires[requirement_type][requirement_provider_building]
+                        requirement_type = requirement_provider_building
+                        break
+                else:
+                    raise NoFertility(f"Island does not have fertility for any providers for {requirement_type}")
+            else:
+                # Else we can, use this provider type
+                number_provider_required = number_required * ALL_BUILDINGS[building_required].requires[requirement_type]
+            self.add_required_building(requirement_type, number_provider_required)
+        # Add these buildings to required (now we have all requirenments
+        self.required_buildings[building_required] += number_required
 
     def required_residence_buildings(self) -> dict:
         results = {}
@@ -187,55 +219,38 @@ class Island:
         return results
 
     def display_required(self) -> None:
-        res = self.required_production_buildings()
+        self.calculate_required_production_buildings()
+
+        print(f"*** {self.name} ***")
         # Round results up
-        for building_name in res:
-            res[building_name] = math.ceil(res[building_name])
+        for building_name in self.required_buildings:
+            self.required_buildings[building_name] = math.ceil(self.required_buildings[building_name])
 
         print("--- Required resource buildings ---")
-        for item in res:
-            print(f"{item} : {res[item]}")
+        for item in self.required_buildings:
+            if self.required_buildings[item] > 0:
+                print(f"{item} : {self.required_buildings[item]}")
         res = self.required_residence_buildings()
         print("--- Required residences ---")
         for item in res:
-            print(f"{item} : {res[item]}")
-
-    def _calculate_requirements(self, building_name: str, building_number: int, existing_buildings: dict):
-        """
-        Args:
-            building_name: building to calculate suppliers for
-            building_number: number of this building needed
-            existing_buildings: dict to store results in
-
-        Returns:
-        """
-        assert building_name in CONSUMABLES_BUILDINGS.keys() or CONSTRUCTION_RES_BUILDING.keys()
-        assert building_number > 0
-        required_fertility = ALL_BUILDINGS[building_name].needs_fertility
-        if required_fertility is not None:
-            if required_fertility not in self.fertility:
-                raise NoFertility(required_fertility)
-
-        for required_building in ALL_BUILDINGS[building_name].requires:
-            required_producer_num = building_number * ALL_BUILDINGS[building_name].requires[required_building]
-            existing_buildings[required_building] += required_producer_num
-            # If this producer has its own required producers, include them
-            for required_building_prechain in ALL_BUILDINGS[required_building].requires:
-
-                existing_buildings[required_building_prechain] += required_producer_num * ALL_BUILDINGS[required_building].requires[
-                    required_building_prechain]
-                self._calculate_requirements(building_name=required_building_prechain, building_number=required_producer_num, existing_buildings=existing_buildings)
-
-        return existing_buildings
+            if res[item] > 0:
+                print(f"{item} : {res[item]}")
 
 
 if __name__ == "__main__":
-    ditchwater = Island(name="Ditchwater", fertility={"wheat"})
-    ditchwater.population["farmers"] = 8 * 10 * 10
-    ditchwater.population["workers"] = 5 * 10 * 20
-    ditchwater.constuction_res_building["sawmill"] = 4
-    ditchwater.constuction_res_building["brick"] = 3
-    ditchwater.constuction_res_building["sailmaker"] = 1
+    ditchwater = Island(name="Ditchwater", fertility={"grain": None, "potato": None, "peppers": None,
+                                                      "iron_mine": 2, "coal_mine": 0, "clay": 3})
+    ditchwater.population["farmers"] = 10 * 10 * 10
+    ditchwater.population["workers"] = 7 * 10 * 20
+    ditchwater.requested_construction_buildings["sawmill"] = 4
+    ditchwater.requested_construction_buildings["brick"] = 6
+    ditchwater.requested_construction_buildings["sailmaker"] = 1
+    ditchwater.requested_construction_buildings["steel_works"] = 1
+    ditchwater.requested_construction_buildings["weapons"] = 1
+
     ditchwater.display_required()
-    # print(ditchwater.required_production_buildings())
-    # print(ditchwater.required_residence_buildings())
+
+    glanther = Island(name="Glanther", fertility={"potato": None, "hops": None, "saltpeter": None,
+                                                  "iron_mine": 1, "coal_mine": 4, "copper_mine": 1})
+    glanther.population["farmers"] = 6 * 10 * 10
+    glanther.display_required()

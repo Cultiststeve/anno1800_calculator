@@ -7,7 +7,10 @@ import main
 
 @pytest.fixture()
 def example_island():
+    "example island with all fertilities"
     example_island = main.Island(name="england", fertility={})
+    for resource in main.NATURAL_RESOURCES:
+        example_island.fertility[resource] = None
     return example_island
 
 
@@ -25,25 +28,39 @@ def test_add_to_pop(example_island):
     assert example_island.population["farmers"] == 75
 
 
-def test_all_buildings_in_required(example_island):
-    required = example_island.required_production_buildings()
-    assert len(required) == len(main.CONSUMABLES_BUILDINGS) + len(main.CONSTRUCTION_RES_BUILDING)
+def test_all_buildings_in_lists():
+    assert len(main.ALL_BUILDINGS) == len(main.CONSUMABLES_BUILDINGS) + len(main.CONSTRUCTION_MATERIAL_BUILDINGS)
+
+
+def test_all_requirements_positive():
+    for building in main.ALL_BUILDINGS:
+        for requirement in main.ALL_BUILDINGS[building].requires:
+            if type(main.ALL_BUILDINGS[building].requires[requirement]) is dict:
+                for possible_provider in main.ALL_BUILDINGS[building].requires[requirement]:
+                    assert main.ALL_BUILDINGS[building].requires[requirement][possible_provider] > 0
+            else:
+                assert main.ALL_BUILDINGS[building].requires[requirement] > 0
+
+
+def test_all_buildings_in_required(example_island: main.Island):
+    example_island.calculate_required_production_buildings()
+    assert len(example_island.required_buildings) == len(main.CONSUMABLES_BUILDINGS) + len(main.CONSTRUCTION_MATERIAL_BUILDINGS)
 
 
 # [worker pop, required fishery]
 @pytest.mark.parametrize("example_numbers", [[1, 1], [800, 1], [801, 2], [1600, 2], [1610, 3]])
-def test_fisher_numbers(example_island, example_numbers):
+def test_fisher_numbers(example_island: main.Island, example_numbers):
     example_island.population["farmers"] = example_numbers[0]
-    required = example_island.required_production_buildings()
-    assert math.ceil(required["fishery"]) == example_numbers[1]
+    example_island.calculate_required_production_buildings()
+    assert math.ceil(example_island.required_buildings["fishery"]) == example_numbers[1]
 
 
 # [worker pop, required schnapps]
 @pytest.mark.parametrize("example_numbers", [[1, 1], [600, 1], [601, 2], [1200, 2], [1210, 3]])
-def test_schnaps_numbers(example_island, example_numbers):
+def test_schnaps_numbers(example_island: main.Island, example_numbers):
     example_island.population["farmers"] = example_numbers[0]
-    required = example_island.required_production_buildings()
-    assert math.ceil(required["schnapps"]) == example_numbers[1]
+    example_island.calculate_required_production_buildings()
+    assert math.ceil(example_island.required_buildings["schnapps"]) == example_numbers[1]
 
 
 @pytest.mark.parametrize("population",
@@ -57,11 +74,11 @@ def test_schnaps_numbers(example_island, example_numbers):
                              [{"farmers": 6, "workers": 0},
                               {"farmers": 55, "workers": 0}],
 
-[{"farmers": 1, "workers": 1},
-                            {"farmers": 10, "workers": 1}],
+                             [{"farmers": 1, "workers": 1},
+                              {"farmers": 10, "workers": 1}],
 
-[{"farmers": 1, "workers": 3},
-                            {"farmers": 10, "workers": 59}],
+                             [{"farmers": 1, "workers": 3},
+                              {"farmers": 10, "workers": 59}],
 
                              [{"farmers": 2, "workers": 0},
                               {"farmers": 20, "workers": 0}]
@@ -77,49 +94,43 @@ def test_residence_numbers(example_island, population):
 # Number schnapps (potato always == schnapps)
 @pytest.mark.parametrize("example_numbers", [1, 1.1, 2, 4, 8, 32, 32.1, 65])
 def test_calculate_requirements_schnapps(example_island, example_numbers):
-    example_island.fertility = {"potato": None}
-    existing = {}
-    for building_name in main.CONSUMABLES_BUILDINGS:
-        existing[building_name] = 0
-    res = example_island._calculate_requirements(building_name="schnapps", building_number=example_numbers, existing_buildings=existing)
-    assert res["potato"] == example_numbers
+    example_island.add_required_building(building_required="schnapps", number_required=example_numbers)
+    assert example_island.required_buildings["potato"] == example_numbers
 
 
 @pytest.mark.parametrize("example_farmer_number", [[1, 1], [590, 1], [600, 1], [601, 2], [1200, 2], [1201, 3]])
 def test_producer_chain_schnapps(example_island, example_farmer_number):
     example_island.population["farmers"] = example_farmer_number[0]
     assert example_island.population["workers"] == 0
-    res = example_island.required_production_buildings()
-    assert math.ceil(res["potato"]) == example_farmer_number[1]
+    example_island.calculate_required_production_buildings()
+    assert math.ceil(example_island.required_buildings["potato"]) == example_farmer_number[1]
 
 
 # num workers, num bakerys, num flours,
 @pytest.mark.parametrize("example_numbers", [[1, 1, 1], [2199, 2, 1], [2200, 2, 1], [2201, 3, 2]])
 def test_bread_chain(example_island, example_numbers):
-    example_island.fertility = {"grain": None}
     example_island.population["workers"] = example_numbers[0]
-    res = example_island.required_production_buildings()
-    assert math.ceil(res["bakery"]) == example_numbers[1]
-    assert math.ceil(res["grain"]) == example_numbers[1]
-    assert math.ceil(res["flour"]) == example_numbers[2]
+    example_island.calculate_required_production_buildings()
+    assert math.ceil(example_island.required_buildings["bakery"]) == example_numbers[1]
+    assert math.ceil(example_island.required_buildings["grain"]) == example_numbers[1]
+    assert math.ceil(example_island.required_buildings["flour"]) == example_numbers[2]
 
 
 @pytest.mark.parametrize("example_numbers", [0, 1, 2, 3, 55])
 def test_sawmill(example_island, example_numbers):
-    example_island.constuction_res_building["sawmill"] = example_numbers
-    res = example_island.required_production_buildings()
-    assert res["lumberjack"] == example_numbers
+    example_island.requested_construction_buildings["sawmill"] = example_numbers
+    example_island.calculate_required_production_buildings()
+    assert example_island.required_buildings["lumberjack"] == example_numbers
 
 
 # number workers, number pig farms, number slaughterhouses, num soap factories
 @pytest.mark.parametrize("example_numbers", [[1, 1, 1, 1], [4800, 7, 5, 1]])
 def test_sausages_and_soap(example_island, example_numbers):
-    example_island.fertility = {"grain": None}
     example_island.population["workers"] = example_numbers[0]
-    res = example_island.required_production_buildings()
-    assert math.ceil(res["pig"]) == example_numbers[1]
-    assert math.ceil(res["slaughters"]) == example_numbers[2]
-    assert math.ceil(res["soap"]) == example_numbers[3]
+    example_island.calculate_required_production_buildings()
+    assert math.ceil(example_island.required_buildings["pig"]) == example_numbers[1]
+    assert math.ceil(example_island.required_buildings["slaughters"]) == example_numbers[2]
+    assert math.ceil(example_island.required_buildings["soap"]) == example_numbers[3]
 
 
 @pytest.mark.parametrize("example_fertility", [{},
@@ -131,13 +142,48 @@ def test_fertilities(example_fertility):
     fertile_island = main.Island(name="fertile", fertility=example_fertility)
 
 
-def test_no_fertility_farmers(example_island):
+def test_no_fertility_farmers(example_island: main.Island):
     example_island.population["farmers"] = 1
-    with pytest.raises(main.NoFertility):
-        example_island.required_production_buildings()
+    example_island.fertility = {}
+    with pytest.raises(AssertionError):
+        example_island.calculate_required_production_buildings()
 
 
 def test_no_fertility_workers(example_island):
     example_island.population["workers"] = 1
+    example_island.fertility = {}
+    with pytest.raises(AssertionError):
+        example_island.calculate_required_production_buildings()
+
+
+def test_display(example_island: main.Island):
+    example_island.display_required()
+
+
+def test_many_clay_pits(example_island: main.Island):
+    example_island.fertility["clay"] = 1
+    example_island.requested_construction_buildings["brick"] = 3
     with pytest.raises(main.NoFertility):
-        example_island.required_production_buildings()
+        example_island.calculate_required_production_buildings()
+
+
+def test_good_clay_pit_number(example_island: main.Island):
+    example_island.fertility["clay"] = 1
+    example_island.requested_construction_buildings["brick"] = 2
+    example_island.calculate_required_production_buildings()
+
+
+def test_steel_works(example_island: main.Island):
+    example_island.requested_construction_buildings["steel_works"] = 1
+    example_island.calculate_required_production_buildings()
+
+
+def test_steel_works_no_coalmine(example_island: main.Island):
+    example_island.fertility["coal_mine"] = 0
+    example_island.requested_construction_buildings["steel_works"] = 3
+    example_island.calculate_required_production_buildings()
+    assert example_island.required_buildings["coal_mine"] == 0
+    assert example_island.required_buildings["charcoal_kiln"] == 2
+    assert example_island.required_buildings["furnace"] == 2
+    assert example_island.required_buildings["steel_works"] == 3
+    assert example_island.required_buildings["iron_mine"] == 1
