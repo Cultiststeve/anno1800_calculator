@@ -57,7 +57,7 @@ FLOUR = ProductionBuilding(name="flour",
                            requires={"grain": 2})
 BAKERY = ProductionBuilding(name="bakery",
                             requires={"flour": .5},
-                            consumers={"workers": 1100, "artisans": 1650 / 2})
+                            consumers={"workers": 2200/2, "artisans": 1650 / 2})
 RENDERING = ProductionBuilding(name="rendering",
                                requires={"pig": 1})
 SOAP = ProductionBuilding(name="soap",
@@ -91,10 +91,35 @@ HOPS = ProductionBuilding(name="hops",
 MALTHOUSE = ProductionBuilding(name="malthouse",
                                requires={"grain": 1 / 2})
 BREWERY = ProductionBuilding(name="brewery",
-                             consumers={"workers": 2600, "artisans": 1950,
-                                        "obreros": 1500},
+                             consumers={"workers": 2600/2, "artisans": 1950/2, "obreros": 1500/2},
                              requires={"malthouse": 2 / 1,
-                                       "hops": 2 / 3})
+                                       "hops": 3/2})
+CATTLE = ProductionBuilding(name="cattle")
+PEPPERS = ProductionBuilding(name="peppers",
+                             needs_fertility="peppers")
+KITCHEN = ProductionBuilding(name="kitchen",
+                             requires={"cattle": 1, "peppers": 1})
+CANNERY = ProductionBuilding(name="cannery",
+                             requires={"kitchen": 8/6, "iron_mine": 1/6},
+                             consumers={"artisans": 11700/6, "engineers": 7800/6, "technicians": 6666/6})
+SAND = ProductionBuilding(name="sand")
+GLASS = ProductionBuilding(name="glass",
+                           requires={"sand": 1})
+WINDOWS = ProductionBuilding(name="windows",
+                             requires={"glass": 2/4, "lumberjack": 1/4})
+SEWING_MACHINE = ProductionBuilding(name="sewing_machine",
+                                    requires={"furnace": 1, "lumberjack": 1/2},
+                                    consumers={"artisans": 4200/2, "engineers": 2800/2, "obreros": 3200/2})
+COTTON_PLANTATION = ProductionBuilding(name="cotton_plantation",
+                                       needs_fertility="cotton_plantation")
+COTTON_MILL = ProductionBuilding(name="cotton_mill",
+                                 requires={"cotton_plantation": 2/1})
+HUNTING_CABIN = ProductionBuilding(name="hunting_cabin",
+                                   needs_fertility="furs")
+FUR_DEALER = ProductionBuilding(name="fur_dealer",
+                                requires={"cotton_mill": 1, "hunting_cabin": 2/1},
+                                consumers={"artisans": 2250, "engineers": 1500})
+
 
 CONSUMABLES_BUILDINGS = {"fishery": FISHERY,
                          "potato": POTATO,
@@ -116,19 +141,32 @@ CONSUMABLES_BUILDINGS = {"fishery": FISHERY,
                          "furnace": FURNACE,
                          "hops": HOPS,
                          "malthouse": MALTHOUSE,
-                         "brewery": BREWERY}
+                         "brewery": BREWERY,
+                         "cattle": CATTLE,
+                         "peppers": PEPPERS,
+                         "kitchen": KITCHEN,
+                         "cannery": CANNERY,
+                         "sand": SAND,
+                         "glass": GLASS,
+                         "sewing_machine": SEWING_MACHINE,
+                         # "cotton_plantation": COTTON_PLANTATION,
+                         # "cotton_mill": COTTON_MILL,
+                         # "hunting_cabin": HUNTING_CABIN,
+                         # "fur_dealer": FUR_DEALER
+                         }
 
 CONSTRUCTION_MATERIAL_BUILDINGS = {"sawmill": SAWMILL,
                                    "brick": BRICK,
                                    "sailmaker": SAIL_MAKER,
-                                   "steel_works": STEEL_WORKS}
+                                   "steel_works": STEEL_WORKS,
+                                   "windows": WINDOWS}
 
 ALL_BUILDINGS = {}
 ALL_BUILDINGS.update(CONSUMABLES_BUILDINGS)
 ALL_BUILDINGS.update(CONSTRUCTION_MATERIAL_BUILDINGS)
 
 NATURAL_RESOURCES = ["coal_mine", "iron_mine", "clay", "copper_mine",
-                     "hops", "grain", "potato", "peppers", "furs", "saltpeter", "grapes"]
+                     "hops", "grain", "potato", "peppers", "furs", "saltpeter", "grapes", "cotton_plantation"]
 
 
 class Island:
@@ -175,10 +213,14 @@ class Island:
             self.requested_construction_buildings[building_type] = 0
 
         self.required_buildings = {}
+        self._reset_required_builings()
+        self.exports_to = {}  # dict of what this island will export, and to where
+        # "good": [number, "island"]
+
+    def _reset_required_builings(self):
+        self.required_buildings = {}
         for building in ALL_BUILDINGS:
             self.required_buildings[building] = 0
-        self.exports_to = {}  # List of what this island will export, and to where
-        # "island_to": {"good: number of buildings exporting}
 
     def calculate_required_production_buildings(self) -> dict:
         """
@@ -187,6 +229,7 @@ class Island:
             (can be floats)
 
         """
+        # self._reset_required_builings()
         # For each consumable building
         for building in CONSUMABLES_BUILDINGS.values():
             # for each consumer
@@ -208,6 +251,12 @@ class Island:
         for island in self.world:
             if building_required in island.fertility:
                 island.add_required_building(building_required, number_required)
+                if building_required in island.exports_to and island.exports_to[building_required][1] == self.name:
+                    # if island already exports that good and it has a trade route to the destination island]
+                    island.exports_to[building_required][0] += number_required
+                else:
+                    # else add a new route
+                    island.exports_to[building_required] = [number_required, self.name]
                 return
         else:
             raise AssertionError(f"{building_required} is required and not present on any island.")
@@ -233,6 +282,7 @@ class Island:
                 assert needed_fertility in self.fertility
             except AssertionError:
                 self.get_imported_good(building_required=building_required, number_required=number_required)
+                return  # Now we are importing good, dont need requirements on this island
             else:
                 if self.fertility[needed_fertility] is not None:  # If there is a limit on fertility
                     if self.fertility[needed_fertility] - number_required < 0:
@@ -287,43 +337,52 @@ class Island:
     def display_required(self) -> None:
         self.calculate_required_production_buildings()
 
-        print(f"*** {self.name} ***")
+        print(f"****** {self.name} ******")
         # Round results up
         for building_name in self.required_buildings:
             self.required_buildings[building_name] = math.ceil(self.required_buildings[building_name])
+        for building_name in self.exports_to:
+            self.exports_to[building_name][0] = math.ceil(self.exports_to[building_name][0])
 
         print("--- Required resource buildings ---")
         for item in self.required_buildings:
             if self.required_buildings[item] > 0:
                 print(f"{item} : {self.required_buildings[item]}")
         res = self.required_residence_buildings()
+        if len(self.exports_to) > 0:
+            print("--- Trade routes ---")
+            for item in self.exports_to:
+                assert self.exports_to[item][0] == self.required_buildings[item]
+                print(f"Export {self.exports_to[item][0]} {item} to {self.exports_to[item][1]}")
         print("--- Required residences ---")
         for item in res:
             if res[item] > 0:
                 print(f"{item} : {res[item]}")
+        print("\n")
 
 
 if __name__ == "__main__":
     world = set()
 
     ditchwater = Island(name="Ditchwater", fertility={"grain": None, "potato": None, "peppers": None,
-                                                      "iron_mine": 2, "coal_mine": 0, "clay": 3},
+                                                      "iron_mine": 2, "coal_mine": 1, "clay": 3},
                         exports={},
                         world=world)
-    ditchwater.population["farmers"] = 10 * 10 * 10
-    ditchwater.population["workers"] = 7 * 10 * 20
+    ditchwater.population["farmers"] = 15 * 10 * 10  # Blocks * houses in block * residents in house
+    ditchwater.population["workers"] = 10 * 10 * 20
+    ditchwater.population["artisans"] = 3 * 10 * 30
     ditchwater.requested_construction_buildings["sawmill"] = 4
     ditchwater.requested_construction_buildings["brick"] = 6
     ditchwater.requested_construction_buildings["sailmaker"] = 1
-    ditchwater.requested_construction_buildings["steel_works"] = 1
+    ditchwater.requested_construction_buildings["steel_works"] = 2
     ditchwater.requested_construction_buildings["weapons"] = 1
+    ditchwater.requested_construction_buildings["windows"] = 1
 
     glanther = Island(name="Glanther", fertility={"potato": None, "hops": None, "saltpeter": None,
                                                   "iron_mine": 1, "coal_mine": 4, "copper_mine": 1},
                       exports={"hops": None},
                       world=world)
     glanther.population["farmers"] = 6 * 10 * 10
-
 
     ditchwater.display_required()
     glanther.display_required()
