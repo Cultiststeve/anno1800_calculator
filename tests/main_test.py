@@ -14,6 +14,14 @@ def example_island():
     return example_island
 
 
+@pytest.fixture()
+def hop_exporter_island() -> main.Island:
+    example_island2 = main.Island(name="example_island2", fertility={}, exports={"hops": None})
+    for resource in main.NATURAL_RESOURCES:
+        example_island2.fertility[resource] = None
+    return example_island2
+
+
 def test_pop_type_in_buildings():
     for building in main.CONSUMABLES_BUILDINGS.values():
         for consumer in building.consumers:
@@ -210,3 +218,12 @@ def test_steel_works_one_coal(example_island: main.Island):
 def test_brewery_no_exports(example_island: main.Island):
     example_island.population["workers"] = 1
     example_island.calculate_required_production_buildings()
+
+
+def test_export_allowed():
+    coal_export_island = main.Island(name="coal_export_island", fertility={"coal_mine": 1}, exports={"coal_mine": 1})
+
+
+def test_export_more_than_possible():
+    with pytest.raises(AssertionError):
+        coal_export_island = main.Island(name="coal_export_island", fertility={"coal_mine": 1}, exports={"coal_mine": 2})

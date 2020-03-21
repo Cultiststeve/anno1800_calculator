@@ -154,6 +154,12 @@ class Island:
                 assert fertility[item] is None
         self.fertility = fertility
         self.exports = exports
+        for export in self.exports:
+            if export in self.fertility:  # if export requires fertility
+                try:
+                    assert self.exports[export] <= self.fertility[export]
+                except AssertionError:
+                    raise AssertionError(f"Cant export {export}, as it requires a fertility and this island only has {self.fertility[export]} of them")
 
         self.population = {}
         for pop in POPULATION_RESIDENCES:
