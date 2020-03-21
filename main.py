@@ -7,7 +7,8 @@ class NoFertility(Exception):
 
 POPULATION_RESIDENCES = {"farmers": 10, "workers": 20,
                          "artisans": 30, "engineers": 40,
-                         "explorers": -1, "technicians": -1}
+                         "explorers": -1, "technicians": -1,
+                         "obreros": -1}
 
 
 class ProductionBuilding:
@@ -85,6 +86,15 @@ STEEL_WORKS = ProductionBuilding(name="steel_works",
                                  requires={"furnace": 2/3})
 WEAPONS = ProductionBuilding(name="weapons",
                              requires={"furnace": 2/6})
+HOPS = ProductionBuilding(name="hops",
+                          needs_fertility="hops")
+MALTHOUSE = ProductionBuilding(name="malthouse",
+                               requires={"grain": 1/2})
+BREWERY = ProductionBuilding(name="brewery",
+                             consumers={"workers": 2600, "artisans": 1950,
+                                        "obreros": 1500},
+                             requires={"malthouse": 2/1,
+                                       "hops": 2/3})
 
 CONSUMABLES_BUILDINGS = {"fishery": FISHERY,
                          "potato": POTATO,
@@ -103,7 +113,10 @@ CONSUMABLES_BUILDINGS = {"fishery": FISHERY,
                          "iron_mine": IRON_MINE,
                          "coal_mine": COAL_MINE,
                          "charcoal_kiln": CHARCOAL_KILN,
-                         "furnace": FURNACE}
+                         "furnace": FURNACE,
+                         "hops": HOPS,
+                         "malthouse": MALTHOUSE,
+                         "brewery": BREWERY}
 
 CONSTRUCTION_MATERIAL_BUILDINGS = {"sawmill": SAWMILL,
                              "brick": BRICK,
@@ -119,13 +132,15 @@ NATURAL_RESOURCES = ["coal_mine", "iron_mine", "clay", "copper_mine",
 
 
 class Island:
-    def __init__(self, name: str, fertility: dict):
+    def __init__(self, name: str, fertility: dict, exports: dict):
         """
 
         Args:
             name: name of island
             fertility: resources on island if present
                 dict value is maximum number of consumers - None if unlimited
+            exports: list of buildings it will export the resources from, if requested
+                will not export if doesnt have fertility cap
         """
         self.name = name
         for item in fertility:
@@ -138,6 +153,7 @@ class Island:
             except TypeError:
                 assert fertility[item] is None
         self.fertility = fertility
+        self.exports = exports
 
         self.population = {}
         for pop in POPULATION_RESIDENCES:
@@ -149,6 +165,8 @@ class Island:
         self.required_buildings = {}
         for building in ALL_BUILDINGS:
             self.required_buildings[building] = 0
+        self.exports_to = {}  # List of what this island will export, and to where
+            # "island_to": {"good: number of buildings exporting}
 
     def calculate_required_production_buildings(self) -> dict:
         """
@@ -182,7 +200,10 @@ class Island:
 
         if ALL_BUILDINGS[building_required].needs_fertility is not None:  # If building has a fertility requirement
             needed_fertility = ALL_BUILDINGS[building_required].needs_fertility
-            assert needed_fertility in self.fertility
+            try:
+                assert needed_fertility in self.fertility
+            except AssertionError:
+                raise AssertionError(f"{needed_fertility} is not in {self.fertility}.")
             if self.fertility[needed_fertility] is not None:
                 self.fertility[needed_fertility] -= number_required  # Reduce available amount
                 if self.fertility[needed_fertility] < 0:
@@ -247,7 +268,6 @@ if __name__ == "__main__":
     ditchwater.requested_construction_buildings["sailmaker"] = 1
     ditchwater.requested_construction_buildings["steel_works"] = 1
     ditchwater.requested_construction_buildings["weapons"] = 1
-
     ditchwater.display_required()
 
     glanther = Island(name="Glanther", fertility={"potato": None, "hops": None, "saltpeter": None,

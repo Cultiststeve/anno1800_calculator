@@ -109,6 +109,8 @@ def test_producer_chain_schnapps(example_island, example_farmer_number):
 # num workers, num bakerys, num flours,
 @pytest.mark.parametrize("example_numbers", [[1, 1, 1], [2199, 2, 1], [2200, 2, 1], [2201, 3, 2]])
 def test_bread_chain(example_island, example_numbers):
+    # Pretend no beer
+    main.BREWERY.consumers["workers"] = 0
     example_island.population["workers"] = example_numbers[0]
     example_island.calculate_required_production_buildings()
     assert math.ceil(example_island.required_buildings["bakery"]) == example_numbers[1]
@@ -187,3 +189,8 @@ def test_steel_works_no_coalmine(example_island: main.Island):
     assert example_island.required_buildings["furnace"] == 2
     assert example_island.required_buildings["steel_works"] == 3
     assert example_island.required_buildings["iron_mine"] == 1
+
+
+def test_brewery_no_exports(example_island: main.Island):
+    example_island.population["workers"] = 1
+    example_island.calculate_required_production_buildings()
