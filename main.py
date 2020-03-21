@@ -132,7 +132,7 @@ NATURAL_RESOURCES = ["coal_mine", "iron_mine", "clay", "copper_mine",
 
 
 class Island:
-    def __init__(self, name: str, fertility: dict, exports: dict):
+    def __init__(self, name: str, fertility: dict, exports: dict, world: set()):
         """
 
         Args:
@@ -142,6 +142,8 @@ class Island:
             exports: list of buildings it will export the resources from, if requested
                 will not export if doesnt have fertility cap
         """
+        self.world = world
+        self.world.add(self)
         self.name = name
         for item in fertility:
             try:
@@ -156,10 +158,14 @@ class Island:
         self.exports = exports
         for export in self.exports:
             if export in self.fertility:  # if export requires fertility
-                try:
-                    assert self.exports[export] <= self.fertility[export]
-                except AssertionError:
-                    raise AssertionError(f"Cant export {export}, as it requires a fertility and this island only has {self.fertility[export]} of them")
+                if self.fertility[export] is not None:  # if it has a limit
+                    if self.exports[export] is None:
+                        raise AssertionError(f"Cant export unlimited {export}, as this island only has {self.fertility[export]} of them")
+                    else:
+                        try:
+                            assert self.exports[export] <= self.fertility[export]
+                        except AssertionError:
+                            raise AssertionError(f"Cant export {export}, as it requires more fertility and this island only has {self.fertility[export]} of them")
 
         self.population = {}
         for pop in POPULATION_RESIDENCES:
@@ -198,6 +204,14 @@ class Island:
                 continue  # If we dont want any of this type on island
             self.add_required_building(building, self.requested_construction_buildings[building])
 
+    def get_imported_good(self, building_required: str, number_required: float):
+        for island in self.world:
+            if building_required in island.fertility:
+                island.add_required_building(building_required, number_required)
+                return
+        else:
+            raise AssertionError(f"{building_required} is required and not present on any island.")
+
     def add_required_building(self, building_required: str, number_required: float):
         """
         Adds providers for required building, then adds required building itself
@@ -218,12 +232,13 @@ class Island:
             try:
                 assert needed_fertility in self.fertility
             except AssertionError:
-                raise AssertionError(f"{needed_fertility} is not in {self.fertility}.")
-            if self.fertility[needed_fertility] is not None:  # If there is a limit on fertility
-                if self.fertility[needed_fertility] - number_required < 0:
-                    raise NoFertility(f"{self.name} requires more {needed_fertility} but none are available.")
-                else:
-                    self.fertility[needed_fertility] -= number_required  # Reduce available amount
+                self.get_imported_good(building_required=building_required, number_required=number_required)
+            else:
+                if self.fertility[needed_fertility] is not None:  # If there is a limit on fertility
+                    if self.fertility[needed_fertility] - number_required < 0:
+                        raise NoFertility(f"{self.name} requires more {needed_fertility} but none are available.")
+                    else:
+                        self.fertility[needed_fertility] -= number_required  # Reduce available amount
 
         # Add required providers
         for requirement_type in ALL_BUILDINGS[building_required].requires:
@@ -289,8 +304,12 @@ class Island:
 
 
 if __name__ == "__main__":
+    world = set()
+
     ditchwater = Island(name="Ditchwater", fertility={"grain": None, "potato": None, "peppers": None,
-                                                      "iron_mine": 2, "coal_mine": 0, "clay": 3})
+                                                      "iron_mine": 2, "coal_mine": 0, "clay": 3},
+                        exports={},
+                        world=world)
     ditchwater.population["farmers"] = 10 * 10 * 10
     ditchwater.population["workers"] = 7 * 10 * 20
     ditchwater.requested_construction_buildings["sawmill"] = 4
@@ -298,9 +317,13 @@ if __name__ == "__main__":
     ditchwater.requested_construction_buildings["sailmaker"] = 1
     ditchwater.requested_construction_buildings["steel_works"] = 1
     ditchwater.requested_construction_buildings["weapons"] = 1
-    ditchwater.display_required()
 
     glanther = Island(name="Glanther", fertility={"potato": None, "hops": None, "saltpeter": None,
-                                                  "iron_mine": 1, "coal_mine": 4, "copper_mine": 1})
+                                                  "iron_mine": 1, "coal_mine": 4, "copper_mine": 1},
+                      exports={"hops": None},
+                      world=world)
     glanther.population["farmers"] = 6 * 10 * 10
+
+
+    ditchwater.display_required()
     glanther.display_required()

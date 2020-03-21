@@ -8,18 +8,11 @@ import main
 @pytest.fixture()
 def example_island():
     "example island with all fertilities"
-    example_island = main.Island(name="example_island", fertility={}, exports={})
+    world = set()
+    example_island = main.Island(name="example_island", fertility={}, exports={}, world=world)
     for resource in main.NATURAL_RESOURCES:
         example_island.fertility[resource] = None
     return example_island
-
-
-@pytest.fixture()
-def hop_exporter_island() -> main.Island:
-    example_island2 = main.Island(name="example_island2", fertility={}, exports={"hops": None})
-    for resource in main.NATURAL_RESOURCES:
-        example_island2.fertility[resource] = None
-    return example_island2
 
 
 def test_pop_type_in_buildings():
@@ -154,7 +147,8 @@ def test_sausages_and_soap(example_island, example_numbers):
                                                {"grain": 5},
                                                {"peppers": 55}])
 def test_fertilities(example_fertility):
-    fertile_island = main.Island(name="fertile", fertility=example_fertility, exports={})
+    world = set()
+    fertile_island = main.Island(name="fertile", fertility=example_fertility, exports={}, world=world)
 
 
 def test_no_fertility_farmers(example_island: main.Island):
@@ -221,9 +215,36 @@ def test_brewery_no_exports(example_island: main.Island):
 
 
 def test_export_allowed():
-    coal_export_island = main.Island(name="coal_export_island", fertility={"coal_mine": 1}, exports={"coal_mine": 1})
+    world = set()
+    coal_export_island = main.Island(name="coal_export_island", fertility={"coal_mine": 1}, exports={"coal_mine": 1}, world=world)
 
 
 def test_export_more_than_possible():
+    world = set()
     with pytest.raises(AssertionError):
-        coal_export_island = main.Island(name="coal_export_island", fertility={"coal_mine": 1}, exports={"coal_mine": 2})
+        coal_export_island = main.Island(name="coal_export_island", fertility={"coal_mine": 1}, exports={"coal_mine": 2}, world=world)
+        
+
+def test_export_unlimited_fer_limit():
+    world = set()
+    with pytest.raises(AssertionError):
+        bad_isle = main.Island(name="bad", fertility={"grain": 1}, exports={"grain": None}, world=world)
+
+
+def test_limit_export_allowed():
+    world = set()
+    coal_export_island = main.Island(name="coal_export_island", fertility={"coal_mine": None}, exports={"coal_mine": 1}, world=world)
+
+
+def test_world_creation(example_island: main.Island):
+    assert example_island in example_island.world
+    second_isle = main.Island(name="2nd", fertility={}, exports={}, world=example_island.world)
+    assert second_isle in example_island.world
+
+
+def test_export_hops_sucess():
+    world = set()
+    main_island = main.Island(name="main-isle", fertility={"potato": None, "grain": None}, exports={}, world=world)
+    main_island.population["workers"] = 1
+    hop_island = main.Island(name="hop-isle", fertility={"hops": None}, exports={"hops": None}, world=world)
+    main_island.calculate_required_production_buildings()
