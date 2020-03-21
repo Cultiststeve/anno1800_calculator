@@ -8,7 +8,7 @@ import main
 @pytest.fixture()
 def example_island():
     "example island with all fertilities"
-    example_island = main.Island(name="england", fertility={})
+    example_island = main.Island(name="example_island", fertility={}, exports={})
     for resource in main.NATURAL_RESOURCES:
         example_island.fertility[resource] = None
     return example_island
@@ -106,11 +106,16 @@ def test_producer_chain_schnapps(example_island, example_farmer_number):
     assert math.ceil(example_island.required_buildings["potato"]) == example_farmer_number[1]
 
 
+@pytest.fixture()
+def remove_brewery():
+    del main.CONSUMABLES_BUILDINGS["brewery"]
+    yield
+    main.CONSUMABLES_BUILDINGS["brewery"] = main.BREWERY
+
 # num workers, num bakerys, num flours,
 @pytest.mark.parametrize("example_numbers", [[1, 1, 1], [2199, 2, 1], [2200, 2, 1], [2201, 3, 2]])
-def test_bread_chain(example_island, example_numbers):
+def test_bread_chain(example_island, remove_brewery, example_numbers):
     # Pretend no beer
-    main.BREWERY.consumers["workers"] = 0
     example_island.population["workers"] = example_numbers[0]
     example_island.calculate_required_production_buildings()
     assert math.ceil(example_island.required_buildings["bakery"]) == example_numbers[1]
@@ -141,7 +146,7 @@ def test_sausages_and_soap(example_island, example_numbers):
                                                {"grain": 5},
                                                {"peppers": 55}])
 def test_fertilities(example_fertility):
-    fertile_island = main.Island(name="fertile", fertility=example_fertility)
+    fertile_island = main.Island(name="fertile", fertility=example_fertility, exports={})
 
 
 def test_no_fertility_farmers(example_island: main.Island):
@@ -189,6 +194,17 @@ def test_steel_works_no_coalmine(example_island: main.Island):
     assert example_island.required_buildings["furnace"] == 2
     assert example_island.required_buildings["steel_works"] == 3
     assert example_island.required_buildings["iron_mine"] == 1
+
+
+def test_steel_works_one_coal(example_island: main.Island):
+    example_island.fertility["coal_mine"] = 1
+    example_island.requested_construction_buildings["steel_works"] = 6
+    example_island.calculate_required_production_buildings()
+    assert example_island.required_buildings["coal_mine"] == 1
+    assert example_island.required_buildings["charcoal_kiln"] == 2
+    assert example_island.required_buildings["furnace"] == 4
+    assert example_island.required_buildings["steel_works"] == 6
+    assert example_island.required_buildings["iron_mine"] == 2
 
 
 def test_brewery_no_exports(example_island: main.Island):

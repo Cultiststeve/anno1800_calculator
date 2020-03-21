@@ -83,18 +83,18 @@ FURNACE = ProductionBuilding(name="furnace",
                                        "iron_mine": .5}
                              )
 STEEL_WORKS = ProductionBuilding(name="steel_works",
-                                 requires={"furnace": 2/3})
+                                 requires={"furnace": 2 / 3})
 WEAPONS = ProductionBuilding(name="weapons",
-                             requires={"furnace": 2/6})
+                             requires={"furnace": 2 / 6})
 HOPS = ProductionBuilding(name="hops",
                           needs_fertility="hops")
 MALTHOUSE = ProductionBuilding(name="malthouse",
-                               requires={"grain": 1/2})
+                               requires={"grain": 1 / 2})
 BREWERY = ProductionBuilding(name="brewery",
                              consumers={"workers": 2600, "artisans": 1950,
                                         "obreros": 1500},
-                             requires={"malthouse": 2/1,
-                                       "hops": 2/3})
+                             requires={"malthouse": 2 / 1,
+                                       "hops": 2 / 3})
 
 CONSUMABLES_BUILDINGS = {"fishery": FISHERY,
                          "potato": POTATO,
@@ -119,9 +119,9 @@ CONSUMABLES_BUILDINGS = {"fishery": FISHERY,
                          "brewery": BREWERY}
 
 CONSTRUCTION_MATERIAL_BUILDINGS = {"sawmill": SAWMILL,
-                             "brick": BRICK,
-                             "sailmaker": SAIL_MAKER,
-                             "steel_works": STEEL_WORKS}
+                                   "brick": BRICK,
+                                   "sailmaker": SAIL_MAKER,
+                                   "steel_works": STEEL_WORKS}
 
 ALL_BUILDINGS = {}
 ALL_BUILDINGS.update(CONSUMABLES_BUILDINGS)
@@ -166,7 +166,7 @@ class Island:
         for building in ALL_BUILDINGS:
             self.required_buildings[building] = 0
         self.exports_to = {}  # List of what this island will export, and to where
-            # "island_to": {"good: number of buildings exporting}
+        # "island_to": {"good: number of buildings exporting}
 
     def calculate_required_production_buildings(self) -> dict:
         """
@@ -185,7 +185,6 @@ class Island:
                 number_required = self.population[consumer] / building.consumers[consumer]
                 self.add_required_building(building_required=building.name, number_required=number_required)
 
-
         # for each construction resource building
         for building in CONSTRUCTION_MATERIAL_BUILDINGS:
             assert self.requested_construction_buildings[building] >= 0
@@ -194,6 +193,16 @@ class Island:
             self.add_required_building(building, self.requested_construction_buildings[building])
 
     def add_required_building(self, building_required: str, number_required: float):
+        """
+        Adds providers for required building, then adds required building itself
+
+        Args:
+            building_required: Building needed
+            number_required:
+
+        Returns:
+
+        """
         # calculate how many buildings needed to satisfy the population
         assert building_required in ALL_BUILDINGS.keys()
         assert number_required > 0
@@ -204,32 +213,47 @@ class Island:
                 assert needed_fertility in self.fertility
             except AssertionError:
                 raise AssertionError(f"{needed_fertility} is not in {self.fertility}.")
-            if self.fertility[needed_fertility] is not None:
-                self.fertility[needed_fertility] -= number_required  # Reduce available amount
-                if self.fertility[needed_fertility] < 0:
+            if self.fertility[needed_fertility] is not None:  # If there is a limit on fertility
+                if self.fertility[needed_fertility] - number_required < 0:
                     raise NoFertility(f"{self.name} requires more {needed_fertility} but none are available.")
+                else:
+                    self.fertility[needed_fertility] -= number_required  # Reduce available amount
 
         # Add required providers
         for requirement_type in ALL_BUILDINGS[building_required].requires:
             if type(ALL_BUILDINGS[building_required].requires[requirement_type]) is dict:
+                # If multiple possible requirements
+                previous_requirement_satified = 0
                 for requirement_provider_building in ALL_BUILDINGS[building_required].requires[requirement_type]:
                     # For each possible provider of the requirement
                     # Check if fertility supports it (if it has a fert requirement)
 
                     if ALL_BUILDINGS[requirement_provider_building].needs_fertility is not None \
-                        and self.fertility[requirement_provider_building] == 0:
+                            and self.fertility[requirement_provider_building] == 0:
                         continue  # No fertility for this building, try next possible provider
                     else:
-                        number_provider_required = number_required * ALL_BUILDINGS[building_required].requires[requirement_type][requirement_provider_building]
-                        requirement_type = requirement_provider_building
-                        break
+                        number_provider_required = (number_required - previous_requirement_satified) * ALL_BUILDINGS[building_required].requires[requirement_type][requirement_provider_building]
+                        try:
+                            self.add_required_building(requirement_provider_building, number_provider_required)
+                            break  # All of this requirement type satisifed
+                        except NoFertility:
+                            assert number_provider_required > 1
+                            # Not enough fertility for all of them, try some
+                            for try_required_num in range(math.ceil(number_provider_required) + 1, 0, -1):  # high to low
+                                try:
+                                    self.add_required_building(requirement_provider_building, try_required_num)
+                                    previous_requirement_satified = try_required_num * 1/ALL_BUILDINGS[building_required].requires[requirement_type][requirement_provider_building]
+                                    break  # We could fit this many in
+                                except NoFertility:
+                                    pass
+                            # Now for loop will goo to next requirement
                 else:
                     raise NoFertility(f"Island does not have fertility for any providers for {requirement_type}")
             else:
-                # Else we can, use this provider type
+                # only one possible requirement, calculate number type
                 number_provider_required = number_required * ALL_BUILDINGS[building_required].requires[requirement_type]
-            self.add_required_building(requirement_type, number_provider_required)
-        # Add these buildings to required (now we have all requirenments
+                self.add_required_building(requirement_type, number_provider_required)
+        # Add these buildings to required (now we have all requirements)
         self.required_buildings[building_required] += number_required
 
     def required_residence_buildings(self) -> dict:
