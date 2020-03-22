@@ -8,7 +8,7 @@ class NoFertility(Exception):
 POPULATION_RESIDENCES = {"farmers": 10, "workers": 20,
                          "artisans": 30, "engineers": 40,
                          "explorers": -1, "technicians": -1,
-                         "obreros": -1}
+                         "jornaleros": 10,  "obreros": 20}
 
 
 class ProductionBuilding:
@@ -111,7 +111,7 @@ SEWING_MACHINE = ProductionBuilding(name="sewing_machine",
                                     requires={"furnace": 1, "lumberjack": 1/2},
                                     consumers={"artisans": 4200/2, "engineers": 2800/2, "obreros": 3200/2})
 COTTON_PLANTATION = ProductionBuilding(name="cotton_plantation",
-                                       needs_fertility="cotton_plantation")
+                                       needs_fertility="cotton")
 COTTON_MILL = ProductionBuilding(name="cotton_mill",
                                  requires={"cotton_plantation": 2/1})
 HUNTING_CABIN = ProductionBuilding(name="hunting_cabin",
@@ -119,6 +119,18 @@ HUNTING_CABIN = ProductionBuilding(name="hunting_cabin",
 FUR_DEALER = ProductionBuilding(name="fur_dealer",
                                 requires={"cotton_mill": 1, "hunting_cabin": 2/1},
                                 consumers={"artisans": 2250, "engineers": 1500})
+PLANTAIN = ProductionBuilding(name="plantain",
+                              needs_fertility="plantain")
+FISH_OIL = ProductionBuilding(name="fish_oil")
+FRIED_PLANTAIN = ProductionBuilding(name="fried_plantain",
+                                    requires={"plantain": 1, "fish_oil": 1},
+                                    consumers={"jornaleros": 700, "obreros": 700})
+SUGAR = ProductionBuilding(name="sugar",
+                           needs_fertility="sugar")
+RUM = ProductionBuilding(name="rum",
+                         requires={"sugar": 1, "lumberjack": .5},
+                         consumers={"jornaleros": 2800, "obreros": 2800,
+                                    "artisans": 2100, "engineers": 1400})
 
 
 CONSUMABLES_BUILDINGS = {"fishery": FISHERY,
@@ -152,21 +164,28 @@ CONSUMABLES_BUILDINGS = {"fishery": FISHERY,
                          # "cotton_plantation": COTTON_PLANTATION,
                          # "cotton_mill": COTTON_MILL,
                          # "hunting_cabin": HUNTING_CABIN,
-                         # "fur_dealer": FUR_DEALER
+                         # "fur_dealer": FUR_DEALER,
+                         "plantain": PLANTAIN,
+                         "fish_oil": FISH_OIL,
+                         "fried_plantain": FRIED_PLANTAIN,
+                         "sugar": SUGAR,
+                         "rum": RUM
                          }
 
 CONSTRUCTION_MATERIAL_BUILDINGS = {"sawmill": SAWMILL,
                                    "brick": BRICK,
                                    "sailmaker": SAIL_MAKER,
                                    "steel_works": STEEL_WORKS,
+                                   "weapons": WEAPONS,
                                    "windows": WINDOWS}
 
 ALL_BUILDINGS = {}
 ALL_BUILDINGS.update(CONSUMABLES_BUILDINGS)
 ALL_BUILDINGS.update(CONSTRUCTION_MATERIAL_BUILDINGS)
 
-NATURAL_RESOURCES = ["coal_mine", "iron_mine", "clay", "copper_mine",
-                     "hops", "grain", "potato", "peppers", "furs", "saltpeter", "grapes", "cotton_plantation"]
+NATURAL_RESOURCES = ["coal_mine", "iron_mine", "clay", "copper_mine", "oil_field", "gold",
+                     "hops", "grain", "potato", "peppers", "furs", "saltpeter", "grapes",
+                     "cotton", "plantain", "sugar", "corn", "coffee", "caoutchouc"]
 
 
 class Island:
@@ -294,7 +313,7 @@ class Island:
         for requirement_type in ALL_BUILDINGS[building_required].requires:
             if type(ALL_BUILDINGS[building_required].requires[requirement_type]) is dict:
                 # If multiple possible requirements
-                previous_requirement_satified = 0
+                building_req_already_satisfied = 0
                 for requirement_provider_building in ALL_BUILDINGS[building_required].requires[requirement_type]:
                     # For each possible provider of the requirement
                     # Check if fertility supports it (if it has a fert requirement)
@@ -303,21 +322,30 @@ class Island:
                             and self.fertility[requirement_provider_building] == 0:
                         continue  # No fertility for this building, try next possible provider
                     else:
-                        number_provider_required = (number_required - previous_requirement_satified) * ALL_BUILDINGS[building_required].requires[requirement_type][requirement_provider_building]
+                        # WE need x more, where x = (total required - already satisfied) * how many of the provider are needed to satisify one furnace
+                        number_provider_required = (number_required - building_req_already_satisfied) * ALL_BUILDINGS[building_required].requires[requirement_type][requirement_provider_building]
                         try:
                             self.add_required_building(requirement_provider_building, number_provider_required)
                             break  # All of this requirement type satisifed
                         except NoFertility:
-                            assert number_provider_required > 1
+                            assert number_provider_required > 0
                             # Not enough fertility for all of them, try some
                             for try_required_num in range(math.ceil(number_provider_required) + 1, 0, -1):  # high to low
                                 try:
                                     self.add_required_building(requirement_provider_building, try_required_num)
-                                    previous_requirement_satified = try_required_num * 1/ALL_BUILDINGS[building_required].requires[requirement_type][requirement_provider_building]
+                                    # Now we have satisifed x of the required building
+                                    building_req_already_satisfied += try_required_num * 1/ALL_BUILDINGS[building_required].requires[requirement_type][requirement_provider_building]
+                                    assert building_req_already_satisfied < number_required
                                     break  # We could fit this many in
                                 except NoFertility:
                                     pass
-                            # Now for loop will goo to next requirement
+                            # if less than 1 building capacity left
+                            spare_capacity = math.ceil(self.required_buildings[requirement_provider_building]) - self.required_buildings[requirement_provider_building]
+                            if spare_capacity > 0:
+                                assert 1 > spare_capacity
+                                self.add_required_building(requirement_provider_building, spare_capacity)
+                                building_req_already_satisfied += spare_capacity * 1/ALL_BUILDINGS[building_required].requires[requirement_type][requirement_provider_building]
+                                # Now for loop will goo to next requirement
                 else:
                     raise NoFertility(f"Island does not have fertility for any providers for {requirement_type}")
             else:
@@ -369,13 +397,13 @@ if __name__ == "__main__":
                         exports={},
                         world=world)
     ditchwater.population["farmers"] = 15 * 10 * 10  # Blocks * houses in block * residents in house
-    ditchwater.population["workers"] = 10 * 10 * 20
+    ditchwater.population["workers"] = 13 * 10 * 20
     ditchwater.population["artisans"] = 3 * 10 * 30
     ditchwater.requested_construction_buildings["sawmill"] = 4
     ditchwater.requested_construction_buildings["brick"] = 6
     ditchwater.requested_construction_buildings["sailmaker"] = 1
     ditchwater.requested_construction_buildings["steel_works"] = 2
-    ditchwater.requested_construction_buildings["weapons"] = 1
+    ditchwater.requested_construction_buildings["weapons"] = 3
     ditchwater.requested_construction_buildings["windows"] = 1
 
     glanther = Island(name="Glanther", fertility={"potato": None, "hops": None, "saltpeter": None,
@@ -384,5 +412,19 @@ if __name__ == "__main__":
                       world=world)
     glanther.population["farmers"] = 6 * 10 * 10
 
+
+    la_isla = Island(name="La Isla", fertility={"plantain": None, "sugar": None, "corn": None, "coffee": None,
+                                                "clay": 3, "oil_field": 8, "gold": 2},
+                     exports={"rum": None},
+                     world=world)
+    la_isla.population["jornaleros"] = 6 * 10 * 10
+
+    unsetteled_newworld = Island("unsettled", fertility={"plantain": None, "cotton": None, "corn": None, "caoutchouc": None, "coffee": None,
+                                                         "clay": 3, "oil_field": 19, "gold": 2},
+                                 exports={"cotton_plantation": None},
+                                 world=world)
+
     ditchwater.display_required()
     glanther.display_required()
+    la_isla.display_required()
+    unsetteled_newworld.display_required()

@@ -318,8 +318,13 @@ def artisans_dont_drink_beer():
     yield
     main.BREWERY.consumers["artisans"] = 1950/2
 
+@pytest.fixture()
+def artisans_dont_drink_rum():
+    del main.RUM.consumers["artisans"]
+    yield
+    main.RUM.consumers["artisans"] = 1950/2
 
-def test_exports_correct_num_with_both():
+def test_exports_correct_num_with_both(artisans_dont_drink_rum):
     world = set()
     main_island = main.Island(name="main-isle", fertility={"potato": None, "grain": None, "peppers": None, "iron_mine": None, "coal_mine": None}, exports={}, world=world)
     main_island.population["farmers"] = 10000
@@ -331,3 +336,37 @@ def test_exports_correct_num_with_both():
     assert len(hop_island.exports_to) == 1
     assert hop_island.exports_to["hops"] == [10, "main-isle"]
     assert hop_island.exports_to["hops"][0] == hop_island.required_buildings["hops"]
+
+
+def test_some_coalmine_somekiln():
+    main_island = main.Island(name="main-isle", fertility={"potato": None, "grain": None, "peppers": None, "iron_mine": 55, "coal_mine": 1}, exports={}, world=set())
+    main_island.requested_construction_buildings["weapons"] = 12
+    main_island.requested_construction_buildings["steel_works"] = 3
+    main_island.calculate_required_production_buildings()
+    assert main_island.required_buildings["weapons"] == 12
+    assert main_island.required_buildings["coal_mine"] == 1
+    assert main_island.required_buildings["charcoal_kiln"] == 4
+
+
+def test_odd_furnace_number():
+    world = set()
+
+    mainisle = main.Island(name="main-isle", fertility={"grain": None, "potato": None, "peppers": None,
+                                                      "iron_mine": 2, "coal_mine": 1, "clay": 3},
+                        exports={},
+                        world=world)
+    mainisle.requested_construction_buildings["sawmill"] = 4
+    mainisle.requested_construction_buildings["brick"] = 6
+    mainisle.requested_construction_buildings["sailmaker"] = 1
+    mainisle.requested_construction_buildings["steel_works"] = 2
+    mainisle.requested_construction_buildings["weapons"] = 3
+    mainisle.requested_construction_buildings["windows"] = 1
+    mainisle.calculate_required_production_buildings()
+    assert mainisle.required_buildings["coal_mine"] == 1
+    assert math.ceil(mainisle.required_buildings["furnace"]) == 3
+    assert math.ceil(mainisle.required_buildings["charcoal_kiln"]) == 1
+
+
+# las isla exporting sugar, when it cant
+
+#todo test recursive exporting (export produced goods if no base level avaialble)
