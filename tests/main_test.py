@@ -394,3 +394,31 @@ def test_export_rum_not_sugar(example_island: main.Island):
                             world=example_island.world)
     example_island.calculate_required_production_buildings()
     new_world.calculate_required_production_buildings()
+
+
+def test_no_coal(example_island: main.Island):
+    del example_island.fertility["coal_mine"]
+    example_island.population["artisans"] = 1
+    example_island.calculate_required_production_buildings()
+
+def test_make_coats_import_raw():
+    fur_island = main.Island(name="fur-isle",
+                             fertility={"furs": None},
+                             exports={"hunting_cabin": None},
+                             world=set()
+                             )
+    cotton_isle = main.Island(name="cotton-isle",
+                                  fertility={"cotton": None},
+                                  exports={"cotton_mill": None},
+                                  world=fur_island.world)
+    coat_isle = main.Island(name="coat-isle",
+                            fertility={"grain": None, "hops": None, "peppers": None, "iron_mine": None},
+                            exports={},
+                            world=fur_island.world)
+    coat_isle.population["artisans"] = 1
+    coat_isle.calculate_required_production_buildings()
+    fur_island.calculate_required_production_buildings()
+    cotton_isle.calculate_required_production_buildings()
+    assert cotton_isle.exports_to["cotton_mill"] == [1, "coat-isle"]
+    assert fur_island.exports_to["hunting_cabin"] == [1, "coat-isle"]
+    assert coat_isle.required_buildings["fur_dealer"] == 1
