@@ -161,9 +161,9 @@ CONSUMABLES_BUILDINGS = {"fishery": FISHERY,
                          "sand": SAND,
                          "glass": GLASS,
                          "sewing_machine": SEWING_MACHINE,
-                         # "cotton_plantation": COTTON_PLANTATION,
-                         # "cotton_mill": COTTON_MILL,
-                         # "hunting_cabin": HUNTING_CABIN,
+                         "cotton_plantation": COTTON_PLANTATION,
+                         "cotton_mill": COTTON_MILL,
+                         "hunting_cabin": HUNTING_CABIN,
                          # "fur_dealer": FUR_DEALER,
                          "plantain": PLANTAIN,
                          "fish_oil": FISH_OIL,
@@ -268,7 +268,7 @@ class Island:
 
     def get_imported_good(self, building_required: str, number_required: float):
         for island in self.world:
-            if building_required in island.fertility:
+            if building_required in (island.fertility and island.exports):
                 island.add_required_building(building_required, number_required)
                 if building_required in island.exports_to and island.exports_to[building_required][1] == self.name:
                     # if island already exports that good and it has a trade route to the destination island]
@@ -278,7 +278,7 @@ class Island:
                     island.exports_to[building_required] = [number_required, self.name]
                 return
         else:
-            raise AssertionError(f"{building_required} is required and not present on any island.")
+            raise NoFertility(f"{building_required} is required and not present/exported from any island.")
 
     def add_required_building(self, building_required: str, number_required: float):
         """
@@ -295,7 +295,21 @@ class Island:
         assert building_required in ALL_BUILDINGS.keys()
         assert number_required > 0
 
-        if ALL_BUILDINGS[building_required].needs_fertility is not None:  # If building has a fertility requirement
+        # Check any requirements for fertility requirements
+        if required_ferts := do_producers_have_fert_requirements(building_name=building_required):
+            # Do we have the fertility
+            for fert in required_ferts:
+                if fert not in self.fertility:
+                    # If we cant produce, try to import this good
+                    try:
+                        self.get_imported_good(building_required=building_required, number_required=number_required)
+                        return
+                    except NoFertility:
+                        break  # Cant import this good, see if we can make here and import requirements
+            # else we have all the required fertilities for producers, so produce localy
+
+        # If building has a fertility requirement
+        if ALL_BUILDINGS[building_required].needs_fertility is not None:
             needed_fertility = ALL_BUILDINGS[building_required].needs_fertility
             try:
                 assert needed_fertility in self.fertility
@@ -387,6 +401,30 @@ class Island:
             if res[item] > 0:
                 print(f"{item} : {res[item]}")
         print("\n")
+
+
+def do_producers_have_fert_requirements(building_name: str) -> set:
+    """
+
+    Returns: dict of fert requirements
+
+    """
+    fert_requirements = set()
+
+    #TODO tempoary fix
+    if building_name not in ALL_BUILDINGS:
+        return fert_requirements
+        # raise NotImplemented("Cant deal with multiple possible requirements")
+
+    for producer in ALL_BUILDINGS[building_name].requires:
+        if type(producer) is dict:
+            raise NotImplemented("Cant do this calculation yet for multiple possible producers")
+        fert_requirements |= do_producers_have_fert_requirements(producer)
+
+    if ALL_BUILDINGS[building_name].needs_fertility is not None:
+        # If this building has a fert req, add it
+        fert_requirements.add(ALL_BUILDINGS[building_name].needs_fertility)
+    return fert_requirements
 
 
 if __name__ == "__main__":

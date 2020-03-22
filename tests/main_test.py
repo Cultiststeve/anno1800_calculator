@@ -155,14 +155,14 @@ def test_fertilities(example_fertility):
 def test_no_fertility_farmers(example_island: main.Island):
     example_island.population["farmers"] = 1
     example_island.fertility = {}
-    with pytest.raises(AssertionError):
+    with pytest.raises(main.NoFertility):
         example_island.calculate_required_production_buildings()
 
 
 def test_no_fertility_workers(example_island):
     example_island.population["workers"] = 1
     example_island.fertility = {}
-    with pytest.raises(AssertionError):
+    with pytest.raises(main.NoFertility):
         example_island.calculate_required_production_buildings()
 
 
@@ -367,6 +367,30 @@ def test_odd_furnace_number():
     assert math.ceil(mainisle.required_buildings["charcoal_kiln"]) == 1
 
 
-# las isla exporting sugar, when it cant
+def test_no_sugar_export(example_island: main.Island):
+    example_island.population["artisans"] = 1
+    del example_island.fertility["sugar"]
+    new_world = main.Island(name="newworld",
+                            fertility={"sugar": None},
+                            exports={},
+                            world=example_island.world)
+    with pytest.raises(main.NoFertility):
+        example_island.calculate_required_production_buildings()
 
-#todo test recursive exporting (export produced goods if no base level avaialble)
+
+def test_do_producers_have_fert():
+    res = main.do_producers_have_fert_requirements("brewery")
+    assert len(res) == 2
+    assert "grain" in res
+    assert "hops" in res
+
+
+def test_export_rum_not_sugar(example_island: main.Island):
+    example_island.population["artisans"] = 1
+    del example_island.fertility["sugar"]
+    new_world = main.Island(name="newworld",
+                            fertility={"sugar": None},
+                            exports={"rum": None},
+                            world=example_island.world)
+    example_island.calculate_required_production_buildings()
+    new_world.calculate_required_production_buildings()
