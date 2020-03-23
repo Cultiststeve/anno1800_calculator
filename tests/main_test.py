@@ -426,3 +426,25 @@ def test_make_coats_import_raw():
     assert math.ceil(fur_island.exports_to["hunting_cabin"][0]) == 1
     assert fur_island.exports_to["hunting_cabin"][1] == "coat-isle"
     assert math.ceil(coat_isle.required_buildings["fur_dealer"]) == 1
+
+
+def test_new_world_pop(example_island: main.Island):
+    example_island.population["jornaleros"] = 1
+    example_island.population["obreros"] = 1
+    example_island.calculate_required_production_buildings()
+
+
+def test_new_world_pop_beer_export(example_island: main.Island):
+    hop_isle = main.Island(name="hop-isle", fertility={"hops": None},
+                           exports={"hops": None}, world=example_island.world)
+    beer_isle = main.Island(name="beer-isle", fertility={"grain": None},
+                            exports={"brewery": None},
+                            world=example_island.world)
+    del example_island.fertility["grain"]
+    example_island.population["jornaleros"] = 1
+    example_island.population["obreros"] = 1
+    example_island.calculate_required_production_buildings()
+    beer_isle.calculate_required_production_buildings()
+    hop_isle.calculate_required_production_buildings()
+    assert math.ceil(beer_isle.required_buildings["brewery"]) == 1
+    assert math.ceil(hop_isle.required_buildings["hops"]) == 1

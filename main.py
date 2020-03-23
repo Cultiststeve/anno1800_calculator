@@ -274,6 +274,8 @@ class Island:
 
     def get_imported_good(self, building_required: str, number_required: float):
         for island in self.world:
+            if island == self:
+                continue  # Cant import from self
             if building_required in (island.fertility and island.exports):
                 island.add_required_building(building_required, number_required)
                 if building_required in island.exports_to and island.exports_to[building_required][1] == self.name:
@@ -440,7 +442,7 @@ if __name__ == "__main__":
 
     ditchwater = Island(name="Ditchwater", fertility={"grain": None, "potato": None, "peppers": None,
                                                       "iron_mine": 2, "coal_mine": 1, "clay": 3},
-                        exports={"schnapps": None},
+                        exports={"schnapps": None, "brewery": None},
                         world=world)
     ditchwater.population["farmers"] = 16 * 10 * 10  # Blocks * houses in block * residents in house
     ditchwater.population["workers"] = 13 * 10 * 20
@@ -464,13 +466,13 @@ if __name__ == "__main__":
                        world=world)
     skidbjerg.population["farmers"] = 5 * 10 * 10
 
-
+    # *** New world ***
     la_isla = Island(name="La Isla", fertility={"plantain": None, "sugar": None, "corn": None, "coffee": None,
                                                 "clay": 3, "oil_field": 8, "gold": 2},
                      exports={"rum": None},
                      world=world)
     la_isla.population["jornaleros"] = 7 * 10 * 10
-    # la_isla.population["obreros"] = 3 * 10 * 10
+    la_isla.population["obreros"] = 3 * 10 * 10
 
     unsetteled_newworld = Island("unsettled", fertility={"plantain": None, "cotton": None, "corn": None, "caoutchouc": None, "coffee": None,
                                                          "clay": 3, "oil_field": 19, "gold": 2},
