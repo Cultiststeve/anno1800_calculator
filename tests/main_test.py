@@ -6,7 +6,15 @@ import main
 
 
 @pytest.fixture()
-def example_island():
+def set_global_modifier_1():
+    existing_mod = main.GLOBAL_CONSUMPTION_MODIFIER
+    main.GLOBAL_CONSUMPTION_MODIFIER = 1
+    yield
+    main.GLOBAL_CONSUMPTION_MODIFIER = existing_mod
+
+
+@pytest.fixture()
+def example_island(set_global_modifier_1):
     "example island with all fertilities"
     world = set()
     example_island = main.Island(name="example_island", fertility={}, exports={}, world=world)
@@ -251,7 +259,7 @@ def test_export_hops_sucess():
     main_island.calculate_required_production_buildings()
     assert main_island.required_buildings["hops"] == 0
     assert math.ceil(hop_island.required_buildings["hops"]) == 1
-    assert math.ceil(hop_island.exports_to["hops"][0]) == 1
+    assert math.ceil(hop_island.exports_to["hops"]["main-isle"]) == 1
 
 
 def test_export_to_sucess():
@@ -261,17 +269,17 @@ def test_export_to_sucess():
     hop_island = main.Island(name="hop-isle", fertility={"hops": None}, exports={"hops": None}, world=world)
     main_island.calculate_required_production_buildings()
     assert len(hop_island.exports_to) == 1
-    assert math.ceil(hop_island.exports_to["hops"][0]) == 1
+    assert math.ceil(hop_island.exports_to["hops"]["main-isle"]) == 1
 
 
-def test_export_to_sucess_many():
+def test_export_to_sucess_many(set_global_modifier_1):
     world = set()
     main_island = main.Island(name="main-isle", fertility={"potato": None, "grain": None}, exports={}, world=world)
     main_island.population["workers"] = (2600 / 2) * (2 / 3) * 5  # number of workers that means 5 hop field required
     hop_island = main.Island(name="hop-isle", fertility={"hops": None}, exports={"hops": None}, world=world)
     main_island.calculate_required_production_buildings()
     assert len(hop_island.exports_to) == 1
-    assert hop_island.exports_to["hops"] == [5, "main-isle"]
+    assert hop_island.exports_to["hops"]["main-isle"] == 5
 
 
 @pytest.fixture()
@@ -316,30 +324,34 @@ def test_more_hops(example_island: main.Island):
 def artisans_dont_drink_beer():
     del main.BREWERY.consumers["artisans"]
     yield
-    main.BREWERY.consumers["artisans"] = 1950/2
+    main.BREWERY.consumers["artisans"] = 1950 / 2
+
 
 @pytest.fixture()
 def artisans_dont_drink_rum():
     del main.RUM.consumers["artisans"]
     yield
-    main.RUM.consumers["artisans"] = 1950/2
+    main.RUM.consumers["artisans"] = 1950 / 2
 
-def test_exports_correct_num_with_both(artisans_dont_drink_rum):
+
+def test_exports_correct_num_with_both(artisans_dont_drink_rum, set_global_modifier_1):
     world = set()
-    main_island = main.Island(name="main-isle", fertility={"potato": None, "grain": None, "peppers": None, "iron_mine": None, "coal_mine": None, "sugar": None, "cotton": None, "furs": None}, exports={}, world=world)
+    main_island = main.Island(name="main-isle",
+                              fertility={"potato": None, "grain": None, "peppers": None, "iron_mine": None, "coal_mine": None, "sugar": None, "cotton": None,
+                                         "furs": None}, exports={}, world=world)
     main_island.population["farmers"] = 10000
-    main_island.population["artisans"] = (1950/2) * (2/3) * 5
+    main_island.population["artisans"] = (1950 / 2) * (2 / 3) * 5
     main_island.population["workers"] = (2600 / 2) * (2 / 3) * 5  # number of workers that means 5 hop field required
     hop_island = main.Island(name="hop-isle", fertility={"hops": None}, exports={"hops": None}, world=world)
     main_island.calculate_required_production_buildings()
     hop_island.calculate_required_production_buildings()
     assert len(hop_island.exports_to) == 1
-    assert hop_island.exports_to["hops"] == [10, "main-isle"]
-    assert hop_island.exports_to["hops"][0] == hop_island.required_buildings["hops"]
+    assert hop_island.exports_to["hops"]["main-isle"] == 10 == hop_island.required_buildings["hops"]
 
 
 def test_some_coalmine_somekiln():
-    main_island = main.Island(name="main-isle", fertility={"potato": None, "grain": None, "peppers": None, "iron_mine": 55, "coal_mine": 1}, exports={}, world=set())
+    main_island = main.Island(name="main-isle", fertility={"potato": None, "grain": None, "peppers": None, "iron_mine": 55, "coal_mine": 1}, exports={},
+                              world=set())
     main_island.requested_construction_buildings["weapons"] = 12
     main_island.requested_construction_buildings["steel_works"] = 3
     main_island.calculate_required_production_buildings()
@@ -352,9 +364,9 @@ def test_odd_furnace_number():
     world = set()
 
     mainisle = main.Island(name="main-isle", fertility={"grain": None, "potato": None, "peppers": None,
-                                                      "iron_mine": 2, "coal_mine": 1, "clay": 3},
-                        exports={},
-                        world=world)
+                                                        "iron_mine": 2, "coal_mine": 1, "clay": 3},
+                           exports={},
+                           world=world)
     mainisle.requested_construction_buildings["sawmill"] = 4
     mainisle.requested_construction_buildings["brick"] = 6
     mainisle.requested_construction_buildings["sailmaker"] = 1
@@ -409,9 +421,9 @@ def test_make_coats_import_raw():
                              world=set()
                              )
     cotton_isle = main.Island(name="cotton-isle",
-                                  fertility={"cotton": None},
-                                  exports={"cotton_mill": None},
-                                  world=fur_island.world)
+                              fertility={"cotton": None},
+                              exports={"cotton_mill": None},
+                              world=fur_island.world)
     coat_isle = main.Island(name="coat-isle",
                             fertility={"grain": None, "hops": None, "peppers": None, "iron_mine": None, "sugar": None},
                             exports={},
@@ -420,11 +432,10 @@ def test_make_coats_import_raw():
     coat_isle.calculate_required_production_buildings()
     fur_island.calculate_required_production_buildings()
     cotton_isle.calculate_required_production_buildings()
-    assert math.ceil(cotton_isle.exports_to["cotton_mill"][0]) == 1
-    assert cotton_isle.exports_to["cotton_mill"][1] == "coat-isle"
+    assert math.ceil(cotton_isle.exports_to["cotton_mill"]["coat-isle"]) == 1
+    assert math.ceil(cotton_isle.exports_to["cotton_mill"]["coat-isle"]) == 1
 
-    assert math.ceil(fur_island.exports_to["hunting_cabin"][0]) == 1
-    assert fur_island.exports_to["hunting_cabin"][1] == "coat-isle"
+    assert math.ceil(fur_island.exports_to["hunting_cabin"]["coat-isle"]) == 1
     assert math.ceil(coat_isle.required_buildings["fur_dealer"]) == 1
 
 
@@ -448,3 +459,37 @@ def test_new_world_pop_beer_export(example_island: main.Island):
     hop_isle.calculate_required_production_buildings()
     assert math.ceil(beer_isle.required_buildings["brewery"]) == 1
     assert math.ceil(hop_isle.required_buildings["hops"]) == 1
+
+
+@pytest.mark.parametrize("example_numbers", [[100, 1, 100, 110], [1000, 10, 10, 1010]])
+def test_percentage_increase(example_island: main.Island, example_numbers):
+    example_island.population["farmers"] = example_numbers[0]
+    example_island.apply_item_modifier_percentage(type_pop_affected="farmers",
+                                                  number_buildings_affected=example_numbers[1],
+                                                  percentage_increase=example_numbers[2])
+    assert example_island.population["farmers"] == example_numbers[3]
+
+
+def test_global_production_modifier(example_island: main.Island):
+    main.GLOBAL_CONSUMPTION_MODIFIER = .5
+    example_island.population["farmers"] = 800
+    example_island.calculate_required_production_buildings()
+    assert example_island.required_buildings["fishery"] == .5
+
+
+def test_global_modifer_producers(example_island: main.Island):
+    main.GLOBAL_CONSUMPTION_MODIFIER = .5
+    example_island.population["farmers"] = 650
+    example_island.calculate_required_production_buildings()
+    assert example_island.required_buildings["sheep"] == .5
+
+
+def test_global_modifier_imports(example_island: main.Island):
+    del example_island.fertility["potato"]
+    potato_isle = main.Island(name="potato-isle", fertility={"potato": None},
+                              exports={"potato": None},
+                              world=example_island.world)
+    main.GLOBAL_CONSUMPTION_MODIFIER = .5
+    example_island.population["farmers"] = 600
+    example_island.calculate_required_production_buildings()
+    assert potato_isle.required_buildings["potato"] == .5
