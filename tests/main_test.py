@@ -326,7 +326,7 @@ def artisans_dont_drink_rum():
 
 def test_exports_correct_num_with_both(artisans_dont_drink_rum):
     world = set()
-    main_island = main.Island(name="main-isle", fertility={"potato": None, "grain": None, "peppers": None, "iron_mine": None, "coal_mine": None}, exports={}, world=world)
+    main_island = main.Island(name="main-isle", fertility={"potato": None, "grain": None, "peppers": None, "iron_mine": None, "coal_mine": None, "sugar": None, "cotton": None, "furs": None}, exports={}, world=world)
     main_island.population["farmers"] = 10000
     main_island.population["artisans"] = (1950/2) * (2/3) * 5
     main_island.population["workers"] = (2600 / 2) * (2 / 3) * 5  # number of workers that means 5 hop field required
@@ -401,6 +401,7 @@ def test_no_coal(example_island: main.Island):
     example_island.population["artisans"] = 1
     example_island.calculate_required_production_buildings()
 
+
 def test_make_coats_import_raw():
     fur_island = main.Island(name="fur-isle",
                              fertility={"furs": None},
@@ -412,13 +413,16 @@ def test_make_coats_import_raw():
                                   exports={"cotton_mill": None},
                                   world=fur_island.world)
     coat_isle = main.Island(name="coat-isle",
-                            fertility={"grain": None, "hops": None, "peppers": None, "iron_mine": None},
+                            fertility={"grain": None, "hops": None, "peppers": None, "iron_mine": None, "sugar": None},
                             exports={},
                             world=fur_island.world)
     coat_isle.population["artisans"] = 1
     coat_isle.calculate_required_production_buildings()
     fur_island.calculate_required_production_buildings()
     cotton_isle.calculate_required_production_buildings()
-    assert cotton_isle.exports_to["cotton_mill"] == [1, "coat-isle"]
-    assert fur_island.exports_to["hunting_cabin"] == [1, "coat-isle"]
-    assert coat_isle.required_buildings["fur_dealer"] == 1
+    assert math.ceil(cotton_isle.exports_to["cotton_mill"][0]) == 1
+    assert cotton_isle.exports_to["cotton_mill"][1] == "coat-isle"
+
+    assert math.ceil(fur_island.exports_to["hunting_cabin"][0]) == 1
+    assert fur_island.exports_to["hunting_cabin"][1] == "coat-isle"
+    assert math.ceil(coat_isle.required_buildings["fur_dealer"]) == 1

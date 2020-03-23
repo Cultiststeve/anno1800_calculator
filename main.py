@@ -470,6 +470,7 @@ if __name__ == "__main__":
                      exports={"rum": None},
                      world=world)
     la_isla.population["jornaleros"] = 7 * 10 * 10
+    # la_isla.population["obreros"] = 3 * 10 * 10
 
     unsetteled_newworld = Island("unsettled", fertility={"plantain": None, "cotton": None, "corn": None, "caoutchouc": None, "coffee": None,
                                                          "clay": 3, "oil_field": 19, "gold": 2},
