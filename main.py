@@ -310,6 +310,19 @@ class Island:
             if 0 < (ammount_requested := self.requested_construction_buildings[building]):
                 self.add_required_building(building, ammount_requested)
 
+        # Special case - coal mines. Prefer coal mines if present
+        if "coal_mine" in self.fertility:
+            assert self.fertility["coal_mine"] is not None
+            if self.fertility["coal_mine"] > 0:
+                if self.fertility["coal_mine"] * 2 <= self.required_buildings["charcoal_kiln"]:  # if more kilns than can be replaced
+                    self.required_buildings["coal_mine"] = self.fertility["coal_mine"]
+                    self.required_buildings["charcoal_kiln"] -= 2 * self.required_buildings["coal_mine"]
+                    assert self.required_buildings["charcoal_kiln"] >= 0
+                else:  # If more coal mines than required
+                    self.required_buildings["coal_mine"] = self.required_buildings["charcoal_kiln"] / 2
+                    self.required_buildings["charcoal_kiln"] = 0
+
+
     def get_imported_good(self, building_required: str, number_required: float):
         for exporter_island in self.world:
             if exporter_island == self:
@@ -373,9 +386,14 @@ class Island:
             if needed_fertility in self.fertility:  # If we have
                 if self.fertility[needed_fertility] is not None:  # If there is a limit on fertility
                     if self.fertility[needed_fertility] < number_required:  # If we need more than island can provide
-                        self.get_imported_good(building_required, number_required)
-            else:
+                        # Import the difference
+                        extra_required = number_required - self.fertility[needed_fertility]
+                        assert extra_required > 0
+                        self.get_imported_good(building_required, extra_required)
+                        number_required -= extra_required
+            else:  # None on this island, import all
                 self.get_imported_good(building_required, number_required)
+                return
 
         # Add these buildings to required (now we have all requirements)
         if needed_fertility is not None:

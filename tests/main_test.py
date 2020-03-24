@@ -20,6 +20,7 @@ def example_island(set_global_modifier_1):
     example_island = main.Island(name="example_island", fertility={}, exports={}, world=world)
     for resource in main.NATURAL_RESOURCES:
         example_island.fertility[resource] = None
+    example_island.fertility["coal_mine"] = 100  # Cant be none
     return example_island
 
 
@@ -337,7 +338,7 @@ def artisans_dont_drink_rum():
 def test_exports_correct_num_with_both(artisans_dont_drink_rum, set_global_modifier_1):
     world = set()
     main_island = main.Island(name="main-isle",
-                              fertility={"potato": None, "grain": None, "peppers": None, "iron_mine": None, "coal_mine": None, "sugar": None, "cotton": None,
+                              fertility={"potato": None, "grain": None, "peppers": None, "iron_mine": None, "coal_mine": 100, "sugar": None, "cotton": None,
                                          "furs": None}, exports={}, world=world)
     main_island.population["farmers"] = 10000
     main_island.population["artisans"] = (1950 / 2) * (2 / 3) * 5
@@ -498,5 +499,7 @@ def test_global_modifier_imports(example_island: main.Island):
 def test_import_some_iron(example_island: main.Island):
     example_island.fertility["iron_mine"] = 1
     iron_isle = main.Island(name="iron-isle", fertility={"iron_mine": 55}, exports={"iron_mine": 50}, world=example_island.world)
-    example_island.population["artisans"] = 4200 * 2
+    example_island.requested_construction_buildings["steel_works"] = 6  # require 2 iron mines
     example_island.calculate_required_production_buildings()
+    assert example_island.required_buildings["iron_mine"] == 1
+    assert iron_isle.required_buildings["iron_mine"] == 1
