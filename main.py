@@ -159,6 +159,19 @@ FELT = ProductionBuilding(name="felt",
 BOMBIN = ProductionBuilding(name="bombin",
                             requires={"felt": 1, "cotton_mill": 1},
                             consumers={"obreros": 1500})
+LIMESTONE = ProductionBuilding(name="limestone",
+                               needs_fertility="limestone")
+CONCRETE = ProductionBuilding(name="concrete",
+                              requires={"furnace": 2/4, "limestone": 2/4})
+COPPER = ProductionBuilding(name="copper",
+                            needs_fertility="copper")
+ZINC = ProductionBuilding(name="zinc",
+                          needs_fertility="zinc")
+BRASS = ProductionBuilding(name="brass",
+                           requires={"copper": 1/2, "zinc": 1/2})
+SPECTACLE = ProductionBuilding(name="spectacle",
+                               requires={"brass": 2/3, "glass": 1/3},
+                               consumers={"engineers": 9000/3, "investors": 5625/3})
 
 CONSUMABLES_BUILDINGS = {"fishery": FISHERY,
                          "potato": POTATO,
@@ -207,21 +220,29 @@ CONSUMABLES_BUILDINGS = {"fishery": FISHERY,
                          "tobacco": TOBACCO,
                          "cigar": CIGAR,
                          "felt": FELT,
-                         "bombin": BOMBIN
+                         "bombin": BOMBIN,
+                         "limestone": LIMESTONE,
+                         "copper": COPPER,
+                         "zinc": ZINC,
+                         "brass": BRASS,
+                         "spectacle": SPECTACLE
                          }
+
 
 CONSTRUCTION_MATERIAL_BUILDINGS = {"sawmill": SAWMILL,
                                    "brick": BRICK,
                                    "sailmaker": SAIL_MAKER,
                                    "steel_works": STEEL_WORKS,
                                    "weapons": WEAPONS,
-                                   "windows": WINDOWS}
+                                   "windows": WINDOWS,
+                                   "concrete": CONCRETE}
 
 ALL_BUILDINGS = {}
 ALL_BUILDINGS.update(CONSUMABLES_BUILDINGS)
 ALL_BUILDINGS.update(CONSTRUCTION_MATERIAL_BUILDINGS)
 
-NATURAL_RESOURCES = ["coal_mine", "iron_mine", "clay", "copper_mine", "oil_field", "gold", "zinc_mine",
+
+NATURAL_RESOURCES = ["coal_mine", "iron_mine", "clay", "copper", "oil_field", "gold", "zinc", "limestone",
                      "hops", "grain", "potato", "peppers", "furs", "saltpeter", "grapes",
                      "cotton", "plantain", "sugar", "corn", "coffee", "caoutchouc", "tobacco", "cocoa"]
 
@@ -472,11 +493,12 @@ if __name__ == "__main__":
 
     ditchwater = Island(name="Ditchwater", fertility={"grain": None, "potato": None, "peppers": None,
                                                       "iron_mine": 2, "coal_mine": 1, "clay": 3},
-                        exports={"schnapps": None, "brewery": None, "sewing_machine": None},
+                        exports={"schnapps": None, "brewery": None, "sewing_machine": None, "bakery": None},
                         world=world)
     ditchwater.population["farmers"] = 16 * 10 * 10  # Blocks * houses in block * residents in house
     ditchwater.population["workers"] = 13 * 10 * 20
     ditchwater.population["artisans"] = 5 * 10 * 30
+    ditchwater.population["engineers"] = 2 * 10 * 40
     ditchwater.apply_item_modifier_percentage("workers", 56, 20)
     ditchwater.apply_item_modifier_percentage("artisans", 36, 20)
     ditchwater.requested_construction_buildings["sawmill"] = 4
@@ -487,24 +509,27 @@ if __name__ == "__main__":
     ditchwater.requested_construction_buildings["windows"] = 1
 
     glanther = Island(name="Glanther", fertility={"potato": None, "hops": None, "saltpeter": None,
-                                                  "iron_mine": 1, "coal_mine": 4, "copper_mine": 1},
-                      exports={"hops": None},
+                                                  "iron_mine": 1, "coal_mine": 4, "copper": 1},
+                      exports={"hops": None, "copper": 1},
                       world=world)
     glanther.population["farmers"] = 6 * 10 * 10
 
     skidbjerg = Island(name="Skidbjerg", fertility={"hops": None, "peppers": None, "furs": None,
-                                                    "clay": 1, "iron_mine": 2, "coal_mine": 2, "zinc_mine": 2},
+                                                    "clay": 1, "iron_mine": 2, "coal_mine": 2, "zinc": 2},
                        exports={"hunting_cabin": None,
-                                "iron_mine": 2
+                                "iron_mine": 2,
+                                "zinc": 2
                                 },
                        world=world)
     skidbjerg.population["farmers"] = 5 * 10 * 10
     skidbjerg.population["workers"] = 3 * 20 * 10
+    skidbjerg.requested_construction_buildings["sawmill"] = 1
+    skidbjerg.requested_construction_buildings["brick"] = 1
 
     # *** New world ***
     la_isla = Island(name="La Isla", fertility={"plantain": None, "sugar": None, "corn": None, "coffee": None,
                                                 "clay": 3, "oil_field": 8, "gold": 2},
-                     exports={"rum": None, "fried_plantain": None, "tortilla": None},
+                     exports={"rum": None, "fried_plantain": None, "tortilla": None, "coffee_roaster": None},
                      world=world)
     la_isla.population["jornaleros"] = 7 * 10 * 10
     la_isla.population["obreros"] = 5 * 20 * 10

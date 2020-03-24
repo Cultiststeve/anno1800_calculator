@@ -42,14 +42,15 @@ def test_all_buildings_in_lists():
     assert len(main.ALL_BUILDINGS) == len(main.CONSUMABLES_BUILDINGS) + len(main.CONSTRUCTION_MATERIAL_BUILDINGS)
 
 
+def test_names_correct():
+    for building in main.ALL_BUILDINGS:
+        assert building == main.ALL_BUILDINGS[building].name
+
+
 def test_all_requirements_positive():
     for building in main.ALL_BUILDINGS:
         for requirement in main.ALL_BUILDINGS[building].requires:
-            if type(main.ALL_BUILDINGS[building].requires[requirement]) is dict:
-                for possible_provider in main.ALL_BUILDINGS[building].requires[requirement]:
-                    assert main.ALL_BUILDINGS[building].requires[requirement][possible_provider] > 0
-            else:
-                assert main.ALL_BUILDINGS[building].requires[requirement] > 0
+            assert main.ALL_BUILDINGS[building].requires[requirement] > 0
 
 
 def test_all_buildings_in_required(example_island: main.Island):
