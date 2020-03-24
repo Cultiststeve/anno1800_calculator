@@ -493,3 +493,10 @@ def test_global_modifier_imports(example_island: main.Island):
     example_island.population["farmers"] = 600
     example_island.calculate_required_production_buildings()
     assert potato_isle.required_buildings["potato"] == .5
+
+
+def test_import_some_iron(example_island: main.Island):
+    example_island.fertility["iron_mine"] = 1
+    iron_isle = main.Island(name="iron-isle", fertility={"iron_mine": 55}, exports={"iron_mine": 50}, world=example_island.world)
+    example_island.population["artisans"] = 4200 * 2
+    example_island.calculate_required_production_buildings()

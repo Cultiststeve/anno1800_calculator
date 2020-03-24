@@ -130,8 +130,8 @@ SUGAR = ProductionBuilding(name="sugar",
                            needs_fertility="sugar")
 RUM = ProductionBuilding(name="rum",
                          requires={"sugar": 1, "lumberjack": .5},
-                         consumers={"jornaleros": 2800, "obreros": 2800,
-                                    "artisans": 2100, "engineers": 1400})
+                         consumers={"jornaleros": 2800/2, "obreros": 2800/2,
+                                    "artisans": 2100/2, "engineers": 1400/2})
 ALPACA = ProductionBuilding(name="alpaca")
 PONCHO = ProductionBuilding(name="poncho",
                             requires={"alpaca": 1},
@@ -206,8 +206,8 @@ CONSUMABLES_BUILDINGS = {"fishery": FISHERY,
                          "marquetry": MARQUETRY,
                          "tobacco": TOBACCO,
                          "cigar": CIGAR,
-                         # "felt": FELT,
-                         # "bombin": BOMBIN
+                         "felt": FELT,
+                         "bombin": BOMBIN
                          }
 
 CONSTRUCTION_MATERIAL_BUILDINGS = {"sawmill": SAWMILL,
@@ -374,7 +374,9 @@ class Island:
             else:
                 if self.fertility[needed_fertility] is not None:  # If there is a limit on fertility
                     if self.fertility[needed_fertility] - number_required < 0:
-                        raise NoFertility(f"{self.name} requires more {needed_fertility} but none are available.")
+                        self.get_imported_good(building_required=building_required, number_required=number_required)
+                        return
+                        # raise NoFertility(f"{self.name} requires more {needed_fertility} but none are available.")
                     else:
                         self.fertility[needed_fertility] -= number_required  # Reduce available amount
 
@@ -434,8 +436,14 @@ class Island:
         for building_name in self.required_buildings:
             self.required_buildings[building_name] = math.ceil(self.required_buildings[building_name])
         for building_name in self.exports_to:
+            total_exported = 0
             for island_to in self.exports_to[building_name]:
+                total_exported += self.exports_to[building_name][island_to]  # Double check we are not exporting more than production capacity
                 self.exports_to[building_name][island_to] = math.ceil(self.exports_to[building_name][island_to])
+            try:
+                assert total_exported <= self.required_buildings[building_name]
+            except AssertionError:
+                raise AssertionError(f"{self.name} is trying to export {total_exported} {building_name} but only produces {self.required_buildings[building_name]}")
 
         print("--- Required resource buildings ---")
         for item in self.required_buildings:
@@ -445,11 +453,9 @@ class Island:
         if len(self.exports_to) > 0:
             print("--- Trade routes ---")
             for item in self.exports_to:
-                total_exported = 0
                 for island_to in self.exports_to[item]:
                     print(f"Export {self.exports_to[item][island_to]} {item} to {island_to}")
-                    total_exported += self.exports_to[item][island_to]
-                assert total_exported <= self.required_buildings[item]
+
         print("--- Required residences ---")
         for item in res:
             if res[item] > 0:
@@ -519,10 +525,11 @@ if __name__ == "__main__":
     skidbjerg = Island(name="Skidbjerg", fertility={"hops": None, "peppers": None, "furs": None,
                                                     "clay": 1, "iron_mine": 2, "coal_mine": 2, "zinc_mine": 2},
                        exports={"hunting_cabin": None,
-                                # "iron_mine": 2
+                                "iron_mine": 2
                                 },
                        world=world)
     skidbjerg.population["farmers"] = 5 * 10 * 10
+    skidbjerg.population["workers"] = 3 * 20 * 10
 
     # *** New world ***
     la_isla = Island(name="La Isla", fertility={"plantain": None, "sugar": None, "corn": None, "coffee": None,
@@ -530,7 +537,7 @@ if __name__ == "__main__":
                      exports={"rum": None, "fried_plantain": None, "tortilla": None},
                      world=world)
     la_isla.population["jornaleros"] = 7 * 10 * 10
-    la_isla.population["obreros"] = 5 * 10 * 10
+    la_isla.population["obreros"] = 5 * 20 * 10
     la_isla.requested_construction_buildings["sawmill"] = 1
     la_isla.requested_construction_buildings["brick"] = 1
 
@@ -539,7 +546,7 @@ if __name__ == "__main__":
                        exports={"cotton_mill": None, "tobacco": None},
                        world=world)
     Fechiques.population["jornaleros"] = 4 * 10 * 10
-    Fechiques.population["obreros"] = 2 * 10 * 10
+    Fechiques.population["obreros"] = 3 * 20 * 10
 
     for island in world:
         island.calculate_required_production_buildings()
