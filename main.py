@@ -80,7 +80,7 @@ COAL_MINE = ProductionBuilding(name="coal_mine",
                                needs_fertility="coal_mine")
 CHARCOAL_KILN = ProductionBuilding(name="charcoal_kiln")
 FURNACE = ProductionBuilding(name="furnace",
-                             requires={"charcoal": {"coal_mine": .5, "charcoal_kiln": 1},
+                             requires={"charcoal_kiln": 1,
                                        "iron_mine": .5}
                              )
 STEEL_WORKS = ProductionBuilding(name="steel_works",
@@ -130,8 +130,8 @@ SUGAR = ProductionBuilding(name="sugar",
                            needs_fertility="sugar")
 RUM = ProductionBuilding(name="rum",
                          requires={"sugar": 1, "lumberjack": .5},
-                         consumers={"jornaleros": 2800/2, "obreros": 2800/2,
-                                    "artisans": 2100/2, "engineers": 1400/2})
+                         consumers={"jornaleros": 2800 / 2, "obreros": 2800 / 2,
+                                    "artisans": 2100 / 2, "engineers": 1400 / 2})
 ALPACA = ProductionBuilding(name="alpaca")
 PONCHO = ProductionBuilding(name="poncho",
                             requires={"alpaca": 1},
@@ -302,38 +302,39 @@ class Island:
             for consumer in building.consumers.keys():
                 if self.population[consumer] == 0:
                     continue  # No need to do any calculations if no pop on this island
-
                 number_required = self.population[consumer] / building.consumers[consumer]
                 self.add_required_building(building_required=building.name, number_required=number_required * GLOBAL_CONSUMPTION_MODIFIER)
 
         # for each construction resource building
-        for building in CONSTRUCTION_MATERIAL_BUILDINGS:
-            assert self.requested_construction_buildings[building] >= 0
-            if self.requested_construction_buildings[building] == 0:
-                continue  # If we dont want any of this type on island
-            self.add_required_building(building, self.requested_construction_buildings[building])
+        for building in self.requested_construction_buildings:
+            if 0 < (ammount_requested := self.requested_construction_buildings[building]):
+                self.add_required_building(building, ammount_requested)
 
     def get_imported_good(self, building_required: str, number_required: float):
-        for island in self.world:
-            if island == self:
+        for exporter_island in self.world:
+            if exporter_island == self:
                 continue  # Cant import from self
-            if building_required in (island.fertility and island.exports):
-                island.add_required_building(building_required, number_required)
+            if building_required in exporter_island.exports:
+                try:
+                    exporter_island.add_required_building(building_required, number_required)
+                except NoFertility:  # Cant export from this island, not enough fertility left
+                    continue
                 # Add to exports list
-                if building_required in island.exports_to:
-                    if self.name in island.exports_to[building_required]:
-                        # if island already exports that good and it has a trade route to the destination island]
-                        island.exports_to[building_required][self.name] += number_required
+                if building_required in exporter_island.exports_to:
+                    # if island already exports that good
+                    if self.name in exporter_island.exports_to[building_required]:
+                        # and it has a trade route to the destination island]
+                        exporter_island.exports_to[building_required][self.name] += number_required
                     else:
-                        # if island already exports good but not to current island
-                        island.exports_to[building_required][self.name] = number_required
+                        # but not to this island
+                        exporter_island.exports_to[building_required][self.name] = number_required
                 else:
                     # else add a new route
-                    island.exports_to[building_required] = {self.name: number_required}
+                    exporter_island.exports_to[building_required] = {self.name: number_required}
                 # Building export has been added, return without raising an error
                 return
         else:
-            raise NoFertility(f"{building_required} is required on {self.name} and not present/exported from any island.")
+            raise NoFertility(f"{building_required} is required on {self.name} and not exported in sufficient quantity from any exporter island.")
 
     def add_required_building(self, building_required: str, number_required: float):
         """
@@ -343,90 +344,50 @@ class Island:
             building_required: Building needed
             number_required:
 
-        Returns:
+        Returns: None
+            raises NoFertiltiy error if not able to add required building
 
         """
-        # calculate how many buildings needed to satisfy the population
         assert building_required in ALL_BUILDINGS.keys()
         assert number_required > 0
 
         # Check any requirements for fertility requirements
-        if required_ferts := do_producers_have_fert_requirements(building_name=building_required):
-            # Do we have the fertility
-            for fert in required_ferts:
-                if fert not in self.fertility:
-                    # If we cant produce, try to import this good
-                    try:
-                        self.get_imported_good(building_required=building_required, number_required=number_required)
-                        return
-                    except NoFertility:
-                        break  # Cant import this good, see if we can make here and import requirements
-            # else we have all the required fertilities for producers, so produce localy
-
-        # If building has a fertility requirement
-        if ALL_BUILDINGS[building_required].needs_fertility is not None:
-            needed_fertility = ALL_BUILDINGS[building_required].needs_fertility
-            try:
-                assert needed_fertility in self.fertility
-            except AssertionError:
-                self.get_imported_good(building_required=building_required, number_required=number_required)
-                return  # Now we are importing good, dont need requirements on this island
-            else:
-                if self.fertility[needed_fertility] is not None:  # If there is a limit on fertility
-                    if self.fertility[needed_fertility] - number_required < 0:
-                        self.get_imported_good(building_required=building_required, number_required=number_required)
-                        return
-                        # raise NoFertility(f"{self.name} requires more {needed_fertility} but none are available.")
-                    else:
-                        self.fertility[needed_fertility] -= number_required  # Reduce available amount
+        required_ferts = do_producers_have_fert_requirements(building_name=building_required)
+        for fert in required_ferts:  # Do we have the fertility
+            if fert not in self.fertility:
+                try:  # If we cant produce, try to import this good
+                    self.get_imported_good(building_required=building_required, number_required=number_required)
+                    return
+                except NoFertility:
+                    break  # Cant import this good, see if we can make here and import requirements
+        # else we have all the required fertilises for producers, so produce locally
 
         # Add required providers
         for requirement_type in ALL_BUILDINGS[building_required].requires:
-            if type(ALL_BUILDINGS[building_required].requires[requirement_type]) is dict:
-                # If multiple possible requirements
-                building_req_already_satisfied = 0
-                for requirement_provider_building in ALL_BUILDINGS[building_required].requires[requirement_type]:
-                    # For each possible provider of the requirement
-                    # Check if fertility supports it (if it has a fert requirement)
+            number_provider_required = number_required * ALL_BUILDINGS[building_required].requires[requirement_type]
+            self.add_required_building(requirement_type, number_provider_required)
 
-                    try:
-                        if ALL_BUILDINGS[requirement_provider_building].needs_fertility is not None \
-                                and self.fertility[requirement_provider_building] == 0:
-                            continue  # No fertility for this building, try next possible provider
-                        else:
-                            # WE need x more, where x = (total required - already satisfied) * how many of the provider are needed to satisify one furnace
-                            number_provider_required = (number_required - building_req_already_satisfied) * \
-                                                       ALL_BUILDINGS[building_required].requires[requirement_type][requirement_provider_building]
-                            try:
-                                self.add_required_building(requirement_provider_building, number_provider_required)
-                                break  # All of this requirement type satisifed
-                            except NoFertility:
-                                assert number_provider_required > 0
-                                # Not enough fertility for all of them, try some
-                                spare_capacity_available = self.fertility[requirement_provider_building]
-                                self.add_required_building(requirement_provider_building, spare_capacity_available)
-                                building_req_already_satisfied += spare_capacity_available * 1 / ALL_BUILDINGS[building_required].requires[requirement_type][
-                                    requirement_provider_building]
-                                assert building_req_already_satisfied > 0
-                                # Now the rest of building requirement satisifed by next options
-
-
-                    except KeyError:
-                        continue
-                else:
-                    raise NoFertility(f"Island does not have fertility for any providers for {requirement_type}")
+        # If building has a fertility requirement
+        needed_fertility = ALL_BUILDINGS[building_required].needs_fertility
+        if needed_fertility is not None:
+            if needed_fertility in self.fertility:  # If we have
+                if self.fertility[needed_fertility] is not None:  # If there is a limit on fertility
+                    if self.fertility[needed_fertility] < number_required:  # If we need more than island can provide
+                        self.get_imported_good(building_required, number_required)
             else:
-                # only one possible requirement, calculate number type
-                number_provider_required = number_required * ALL_BUILDINGS[building_required].requires[requirement_type]
-                self.add_required_building(requirement_type, number_provider_required)
+                self.get_imported_good(building_required, number_required)
+
         # Add these buildings to required (now we have all requirements)
+        if needed_fertility is not None:
+            if self.fertility[needed_fertility] is not None:  # If there is a limit on fertility
+                self.fertility[needed_fertility] -= number_required
+                assert self.fertility[needed_fertility] >= 0
         self.required_buildings[building_required] += number_required
 
     def required_residence_buildings(self) -> dict:
         results = {}
         for pop in self.population:
             results[pop] = math.ceil(self.population[pop] / POPULATION_RESIDENCES[pop])
-
         return results
 
     def display_required(self) -> None:
@@ -443,7 +404,8 @@ class Island:
             try:
                 assert total_exported <= self.required_buildings[building_name]
             except AssertionError:
-                raise AssertionError(f"{self.name} is trying to export {total_exported} {building_name} but only produces {self.required_buildings[building_name]}")
+                raise AssertionError(
+                    f"{self.name} is trying to export {total_exported} {building_name} but only produces {self.required_buildings[building_name]}")
 
         print("--- Required resource buildings ---")
         for item in self.required_buildings:
@@ -465,28 +427,18 @@ class Island:
 
 def do_producers_have_fert_requirements(building_name: str) -> set:
     """
+    Calculate any fertility requirements of the building given + and producers for it
+
+    Args:
+        building_name: building to calculate
 
     Returns: dict of fert requirements
 
     """
+    assert building_name in ALL_BUILDINGS
     fert_requirements = set()
 
-    # TODO tempoary fix
-    if building_name not in ALL_BUILDINGS:
-        return fert_requirements
-        # raise NotImplemented("Cant deal with multiple possible requirements")
-
     for producer in ALL_BUILDINGS[building_name].requires:
-        if type(ALL_BUILDINGS[building_name].requires[producer]) is dict:
-            for possible_producer in ALL_BUILDINGS[building_name].requires[producer]:
-                if ALL_BUILDINGS[possible_producer].needs_fertility is None:
-                    # if one of the possible producers has no requirements, then assume to use thaat in worst case
-                    break
-            else:
-                # If all producers have a fert requirement
-                for possible_producer in ALL_BUILDINGS[building_name].requires[producer]:
-                    fert_requirements |= do_producers_have_fert_requirements(possible_producer)
-
         fert_requirements |= do_producers_have_fert_requirements(producer)
 
     if ALL_BUILDINGS[building_name].needs_fertility is not None:
