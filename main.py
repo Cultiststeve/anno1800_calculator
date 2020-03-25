@@ -36,21 +36,28 @@ class ProductionBuilding:
             return False
 
 
+LUMBERJACK = ProductionBuilding(name="lumberjack")
+SAWMILL = ProductionBuilding(name="sawmill",
+                             requires={"lumberjack": 1})
 FISHERY = ProductionBuilding(name="fishery",
-                             consumers={"farmers": 800, "workers": 800})
+                             consumers={"farmers": 80, "workers": 40})
 POTATO = ProductionBuilding(name="potato",
                             needs_fertility="potato")
 SCHNAPPS = ProductionBuilding(name="schnapps",
-                              consumers={"farmers": 600, "workers": 600,
-                                         "explorers": 1333, "technicians": 1333},
+                              consumers={"farmers": 60, "workers": 30,
+                                         "explorers": 133.3, "technicians": 66.7},
                               requires={"potato": 1})
 SHEEP = ProductionBuilding(name="sheep")
 KNITTERS = ProductionBuilding(name="knitters",
-                              consumers={"farmers": 650, "workers": 650},
+                              consumers={"farmers": 65, "workers": 32.5},
                               requires={"sheep": 1})
+CLAY = ProductionBuilding(name="clay",
+                          needs_fertility="clay")
+BRICK = ProductionBuilding(name="brick",
+                           requires={"clay": .5})
 PIG = ProductionBuilding(name="pig")
 SLAUGHTERS = ProductionBuilding(name="slaughters",
-                                consumers={"workers": 1000, "artisans": 750},
+                                consumers={"workers": 50, "artisans": 25},
                                 requires={"pig": 1})
 GRAIN = ProductionBuilding(name="grain",
                            needs_fertility="grain")
@@ -58,20 +65,7 @@ FLOUR = ProductionBuilding(name="flour",
                            requires={"grain": 2})
 BAKERY = ProductionBuilding(name="bakery",
                             requires={"flour": .5},
-                            consumers={"workers": 2200 / 2, "artisans": 1650 / 2})
-RENDERING = ProductionBuilding(name="rendering",
-                               requires={"pig": 1})
-SOAP = ProductionBuilding(name="soap",
-                          requires={"rendering": 2},
-                          consumers={"workers": 4800, "artisans": 3600})
-
-LUMBERJACK = ProductionBuilding(name="lumberjack")
-SAWMILL = ProductionBuilding(name="sawmill",
-                             requires={"lumberjack": 1})
-CLAY = ProductionBuilding(name="clay",
-                          needs_fertility="clay")
-BRICK = ProductionBuilding(name="brick",
-                           requires={"clay": .5})
+                            consumers={"workers": 110 / 2, "artisans": 55 / 2})
 SAIL_MAKER = ProductionBuilding(name="sailmaker",
                                 requires={"sheep": 1})
 IRON_MINE = ProductionBuilding(name="iron_mine",
@@ -80,11 +74,14 @@ COAL_MINE = ProductionBuilding(name="coal_mine",
                                needs_fertility="coal_mine")
 CHARCOAL_KILN = ProductionBuilding(name="charcoal_kiln")
 FURNACE = ProductionBuilding(name="furnace",
-                             requires={"charcoal_kiln": 1,
-                                       "iron_mine": .5}
-                             )
+                             requires={"charcoal_kiln": 2 / 2, "iron_mine": 1 / 2})
 STEEL_WORKS = ProductionBuilding(name="steel_works",
                                  requires={"furnace": 2 / 3})
+RENDERING = ProductionBuilding(name="rendering",
+                               requires={"pig": 1})
+SOAP = ProductionBuilding(name="soap",
+                          requires={"rendering": 2},
+                          consumers={"workers": 240, "artisans": 120})
 WEAPONS = ProductionBuilding(name="weapons",
                              requires={"furnace": 2 / 6})
 HOPS = ProductionBuilding(name="hops",
@@ -92,9 +89,14 @@ HOPS = ProductionBuilding(name="hops",
 MALTHOUSE = ProductionBuilding(name="malthouse",
                                requires={"grain": 1 / 2})
 BREWERY = ProductionBuilding(name="brewery",
-                             consumers={"workers": 2600 / 2, "artisans": 1950 / 2, "obreros": 1500 / 2},
+                             consumers={"workers": 130 / 2, "artisans": 65 / 2, "obreros": 75 / 2},
                              requires={"malthouse": 2 / 1,
                                        "hops": 3 / 2})
+SAND = ProductionBuilding(name="sand")
+GLASS = ProductionBuilding(name="glass",
+                           requires={"sand": 1})
+WINDOWS = ProductionBuilding(name="windows",
+                             requires={"glass": 2 / 4, "lumberjack": 1 / 4})
 CATTLE = ProductionBuilding(name="cattle")
 PEPPERS = ProductionBuilding(name="peppers",
                              needs_fertility="peppers")
@@ -102,150 +104,151 @@ KITCHEN = ProductionBuilding(name="kitchen",
                              requires={"cattle": 1, "peppers": 1})
 CANNERY = ProductionBuilding(name="cannery",
                              requires={"kitchen": 8 / 6, "iron_mine": 1 / 6},
-                             consumers={"artisans": 11700 / 6, "engineers": 7800 / 6, "technicians": 6666 / 6})
-SAND = ProductionBuilding(name="sand")
-GLASS = ProductionBuilding(name="glass",
-                           requires={"sand": 1})
-WINDOWS = ProductionBuilding(name="windows",
-                             requires={"glass": 2 / 4, "lumberjack": 1 / 4})
+                             consumers={"artisans": 390 / 6, "engineers": 195 / 6, "technicians": 333.3 / 6})
 SEWING_MACHINE = ProductionBuilding(name="sewing_machine",
                                     requires={"furnace": 1, "lumberjack": 1 / 2},
-                                    consumers={"artisans": 4200 / 2, "engineers": 2800 / 2, "obreros": 3200 / 2})
-COTTON_PLANTATION = ProductionBuilding(name="cotton_plantation",
-                                       needs_fertility="cotton")
-COTTON_MILL = ProductionBuilding(name="cotton_mill",
-                                 requires={"cotton_plantation": 2 / 1})
+                                    consumers={"artisans": 140 / 2, "engineers": 70 / 2, "obreros": 160 / 2})
 HUNTING_CABIN = ProductionBuilding(name="hunting_cabin",
                                    needs_fertility="furs")
 FUR_DEALER = ProductionBuilding(name="fur_dealer",
                                 requires={"cotton_mill": 1, "hunting_cabin": 2 / 1},
-                                consumers={"artisans": 2250, "engineers": 1500})
+                                consumers={"artisans": 75, "engineers": 37.5})
+LIMESTONE = ProductionBuilding(name="limestone",
+                               needs_fertility="limestone")
+CONCRETE = ProductionBuilding(name="concrete",
+                              requires={"furnace": 2 / 4, "limestone": 2 / 4})
+COPPER = ProductionBuilding(name="copper",
+                            needs_fertility="copper")
+ZINC = ProductionBuilding(name="zinc",
+                          needs_fertility="zinc")
+BRASS = ProductionBuilding(name="brass",
+                           requires={"copper": 1 / 2, "zinc": 1 / 2})
+SPECTACLE = ProductionBuilding(name="spectacle",
+                               requires={"brass": 2 / 3, "glass": 1 / 3},
+                               consumers={"engineers": 225 / 3, "investors": 112.5 / 3})
+SALTPETER = ProductionBuilding(name="saltpeter",
+                               needs_fertility="saltpeter")
+DYNAMITE = ProductionBuilding(name="dynamite",
+                              requires={"rendering": 4 / 4, "saltpeter": 8 / 4})
+HEAVY_WEAPONS = ProductionBuilding(name="heavy_weapons",
+                                   requires={"furnace": 2 / 4, "dynamite": 4 / 4})
+PENNY_FARTHINGS = ProductionBuilding(name="penny_farthings",
+                                     requires={"caoutchouc": 1 / 4, "furnace": 2 / 4},
+                                     consumers={"engineers": 160, "investors": 80})
+MOTORS = ProductionBuilding(name="motors",
+                            requires={"furnace": 2 / 3, "brass": 4 / 3})
+GOLD_MINE = ProductionBuilding(name="gold_mine",
+                               needs_fertility="gold")
+GOLDSMITH = ProductionBuilding(name="goldsmith",
+                               requires={"gold_mine": 10 / 4, "charcoal_kiln": 2 / 4})
+CLOCK = ProductionBuilding(name="clock",
+                           requires={"goldsmith": 4 / 3, "glass": 2 / 3},
+                           consumers={"engineers": 510 / 3, "investors": 225 / 3})
+FILAMENT = ProductionBuilding(name="filament",
+                              requires={"charcoal_kiln": 2 / 4})
+BULBS = ProductionBuilding(name="bulbs",
+                           requires={"filament": 4 / 4, "glass": 2 / 4},
+                           consumers={"engineers": 320 / 4, "investors": 160 / 4})
+
+# *** New World ***
 PLANTAIN = ProductionBuilding(name="plantain",
                               needs_fertility="plantain")
 FISH_OIL = ProductionBuilding(name="fish_oil")
 FRIED_PLANTAIN = ProductionBuilding(name="fried_plantain",
                                     requires={"plantain": 1, "fish_oil": 1},
-                                    consumers={"jornaleros": 700, "obreros": 700})
+                                    consumers={"jornaleros": 70, "obreros": 35})
 SUGAR = ProductionBuilding(name="sugar",
                            needs_fertility="sugar")
 RUM = ProductionBuilding(name="rum",
-                         requires={"sugar": 1, "lumberjack": .5},
-                         consumers={"jornaleros": 2800 / 2, "obreros": 2800 / 2,
-                                    "artisans": 2100 / 2, "engineers": 1400 / 2})
+                         requires={"sugar": 2 / 2, "lumberjack": 1 / 2},
+                         consumers={"jornaleros": 280 / 2, "obreros": 140 / 2,
+                                    "artisans": 70 / 2, "engineers": 35 / 2})
 ALPACA = ProductionBuilding(name="alpaca")
 PONCHO = ProductionBuilding(name="poncho",
                             requires={"alpaca": 1},
-                            consumers={"jornaleros": 800, "obreros": 800})
+                            consumers={"jornaleros": 80, "obreros": 40})
 CORN = ProductionBuilding(name="corn",
                           needs_fertility="corn")
 TORTILLA = ProductionBuilding(name="tortilla",
                               requires={"cattle": 2, "corn": 2},
-                              consumers={"obreros": 1400})
+                              consumers={"obreros": 70})
 COFFEE_PLANTATION = ProductionBuilding(name="coffee_plantation",
                                        needs_fertility="coffee")
 COFFEE_ROASTER = ProductionBuilding(name="coffee_roaster",
                                     requires={"coffee_plantation": 2},
-                                    consumers={"obreros": 3400, "engineers": 1700,
-                                               "investors": 1062.5, "technicians": 1666})
+                                    consumers={"obreros": 170, "engineers": 42.5,
+                                               "investors": 21.25, "technicians": 83.3})
+COTTON_PLANTATION = ProductionBuilding(name="cotton_plantation",
+                                       needs_fertility="cotton")
+COTTON_MILL = ProductionBuilding(name="cotton_mill",
+                                 requires={"cotton_plantation": 2 / 1})
+FELT = ProductionBuilding(name="felt",
+                          requires={"alpaca": 1})
+BOMBIN = ProductionBuilding(name="bombin",
+                            requires={"felt": 1, "cotton_mill": 1},
+                            consumers={"obreros": 75})
 MARQUETRY = ProductionBuilding(name="marquetry",
                                requires={"lumberjack": 1 / 4})
 TOBACCO = ProductionBuilding(name="tobacco",
                              needs_fertility="tobacco")
 CIGAR = ProductionBuilding(name="cigar",
                            requires={"tobacco": 8 / 2, "marquetry": 4 / 2},
-                           consumers={"obreros": 7200, "investors": 9000})
-FELT = ProductionBuilding(name="felt",
-                          requires={"alpaca": 1})
-BOMBIN = ProductionBuilding(name="bombin",
-                            requires={"felt": 1, "cotton_mill": 1},
-                            consumers={"obreros": 1500})
-LIMESTONE = ProductionBuilding(name="limestone",
-                               needs_fertility="limestone")
-CONCRETE = ProductionBuilding(name="concrete",
-                              requires={"furnace": 2/4, "limestone": 2/4})
-COPPER = ProductionBuilding(name="copper",
-                            needs_fertility="copper")
-ZINC = ProductionBuilding(name="zinc",
-                          needs_fertility="zinc")
-BRASS = ProductionBuilding(name="brass",
-                           requires={"copper": 1/2, "zinc": 1/2})
-SPECTACLE = ProductionBuilding(name="spectacle",
-                               requires={"brass": 2/3, "glass": 1/3},
-                               consumers={"engineers": 9000/3, "investors": 5625/3})
-SALTPETER = ProductionBuilding(name="saltpeter",
-                               needs_fertility="saltpeter")
-DYNAMITE = ProductionBuilding(name="dynamite",
-                              requires={"rendering": 4/4, "saltpeter": 8/4})
-HEAVY_WEAPONS = ProductionBuilding(name="heavy_weapons",
-                                   requires={"furnace": 2/4, "dynamite": 4/4})
+                           consumers={"obreros": 360, "investors": 180})
+
+# *** New world just to supply old world
 CAOUTCHOUC = ProductionBuilding(name="caoutchouc",
                                 needs_fertility="caoutchouc")
-PENNY_FARTHINGS = ProductionBuilding(name="penny_farthings",
-                                     requires={"caoutchouc": 1/4, "furnace": 2/4},
-                                     consumers={"engineers": 6400, "investors": 4000})
-MOTORS = ProductionBuilding(name="motors",
-                            requires={"furnace": 2/3, "brass": 4/3})
+SUGAR_REFINERY = ProductionBuilding(name="sugar_refinery",
+                                    requires={"sugar": 1})
+COCOA = ProductionBuilding(name="cocoa",
+                           needs_fertility="cocoa")
+CHOCOLATE = ProductionBuilding(name="chocolate",
+                               requires={"sugar_refinery": 1, "cocoa": 2},
+                               consumers={"investors": 37.5})
 
-CONSUMABLES_BUILDINGS = {"fishery": FISHERY,
-                         "potato": POTATO,
-                         "schnapps": SCHNAPPS,
-                         "sheep": SHEEP,
-                         "knitters": KNITTERS,
-                         "pig": PIG,
-                         "slaughters": SLAUGHTERS,
-                         "grain": GRAIN,
-                         "flour": FLOUR,
-                         "bakery": BAKERY,
-                         "rendering": RENDERING,
-                         "soap": SOAP,
-                         "lumberjack": LUMBERJACK,
-                         "clay": CLAY,
-                         "iron_mine": IRON_MINE,
-                         "coal_mine": COAL_MINE,
-                         "charcoal_kiln": CHARCOAL_KILN,
-                         "furnace": FURNACE,
-                         "hops": HOPS,
-                         "malthouse": MALTHOUSE,
-                         "brewery": BREWERY,
-                         "cattle": CATTLE,
-                         "peppers": PEPPERS,
-                         "kitchen": KITCHEN,
-                         "cannery": CANNERY,
-                         "sand": SAND,
-                         "glass": GLASS,
-                         "sewing_machine": SEWING_MACHINE,
-                         "cotton_plantation": COTTON_PLANTATION,
-                         "cotton_mill": COTTON_MILL,
-                         "hunting_cabin": HUNTING_CABIN,
-                         "fur_dealer": FUR_DEALER,
-                         "plantain": PLANTAIN,
-                         "fish_oil": FISH_OIL,
-                         "fried_plantain": FRIED_PLANTAIN,
-                         "sugar": SUGAR,
-                         "rum": RUM,
-                         "alpaca": ALPACA,
-                         "poncho": PONCHO,
-                         "corn": CORN,
-                         "tortilla": TORTILLA,
-                         "coffee_plantation": COFFEE_PLANTATION,
-                         "coffee_roaster": COFFEE_ROASTER,
-                         "marquetry": MARQUETRY,
-                         "tobacco": TOBACCO,
-                         "cigar": CIGAR,
-                         "felt": FELT,
-                         "bombin": BOMBIN,
-                         "limestone": LIMESTONE,
-                         "copper": COPPER,
-                         "zinc": ZINC,
-                         "brass": BRASS,
-                         "saltpeter": SALTPETER,
-                         "spectacle": SPECTACLE,
-                         "dynamite": DYNAMITE,
-                         # "caoutchouc": CAOUTCHOUC,
-                         # "penny_farthings": PENNY_FARTHINGS
-                         # "filament": FILAMENT
-                         }
+CONSUMABLES_BUILDINGS = {
+    "lumberjack": LUMBERJACK,
+    "fishery": FISHERY,
+    "potato": POTATO, "schnapps": SCHNAPPS,
+    "sheep": SHEEP, "knitters": KNITTERS,
+    "clay": CLAY,
+    "pig": PIG, "slaughters": SLAUGHTERS,
+    "grain": GRAIN, "flour": FLOUR, "bakery": BAKERY,
+    "iron_mine": IRON_MINE, "coal_mine": COAL_MINE, "charcoal_kiln": CHARCOAL_KILN, "furnace": FURNACE,
+    "rendering": RENDERING, "soap": SOAP,
+    "hops": HOPS, "malthouse": MALTHOUSE, "brewery": BREWERY,
+    "sand": SAND, "glass": GLASS,
+    "cattle": CATTLE, "peppers": PEPPERS, "kitchen": KITCHEN, "cannery": CANNERY,
+    "sewing_machine": SEWING_MACHINE,
+    "hunting_cabin": HUNTING_CABIN, "fur_dealer": FUR_DEALER,
+    "limestone": LIMESTONE,
+    "copper": COPPER,
+    "zinc": ZINC,
+    "brass": BRASS,
+    "spectacle": SPECTACLE,
+    "saltpeter": SALTPETER,
+    "dynamite": DYNAMITE,
+    "penny_farthings": PENNY_FARTHINGS,
+    "gold_mine": GOLD_MINE,
+    "goldsmith": GOLDSMITH,
+    "clock": CLOCK,
+    "filament": FILAMENT,
+    "bulbs": BULBS,
 
+    # ** New World **
+    "plantain": PLANTAIN, "fish_oil": FISH_OIL, "fried_plantain": FRIED_PLANTAIN,
+    "sugar": SUGAR, "rum": RUM,
+    "alpaca": ALPACA, "poncho": PONCHO,
+    "corn": CORN, "tortilla": TORTILLA,
+    "coffee_plantation": COFFEE_PLANTATION, "coffee_roaster": COFFEE_ROASTER,
+    "cotton_plantation": COTTON_PLANTATION, "cotton_mill": COTTON_MILL, "felt": FELT, "bombin": BOMBIN,
+    "tobacco": TOBACCO, "marquetry": MARQUETRY, "cigar": CIGAR,
+
+    # ** New world just exports
+    "caoutchouc": CAOUTCHOUC,
+    "sugar_refinery": SUGAR_REFINERY, "cocoa": COCOA, "chocolate": CHOCOLATE,
+
+}
 
 CONSTRUCTION_MATERIAL_BUILDINGS = {"sawmill": SAWMILL,
                                    "brick": BRICK,
@@ -260,7 +263,6 @@ CONSTRUCTION_MATERIAL_BUILDINGS = {"sawmill": SAWMILL,
 ALL_BUILDINGS = {}
 ALL_BUILDINGS.update(CONSUMABLES_BUILDINGS)
 ALL_BUILDINGS.update(CONSTRUCTION_MATERIAL_BUILDINGS)
-
 
 NATURAL_RESOURCES = ["coal_mine", "iron_mine", "clay", "copper", "oil", "gold", "zinc", "limestone",
                      "hops", "grain", "potato", "peppers", "furs", "saltpeter", "grapes",
@@ -306,9 +308,9 @@ class Island:
                             raise AssertionError(
                                 f"Cant export {export}, as it requires more fertility and this island only has {self.fertility[export]} of them")
 
-        self.population = {}
+        self.residences = {}
         for pop in POPULATION_RESIDENCES:
-            self.population[pop] = 0
+            self.residences[pop] = 0
         self.requested_construction_buildings = {}
         for building_type in CONSTRUCTION_MATERIAL_BUILDINGS:
             self.requested_construction_buildings[building_type] = 0
@@ -326,7 +328,7 @@ class Island:
     def apply_item_modifier_percentage(self, type_pop_affected: str, number_buildings_affected: int, percentage_increase: int):
         assert type_pop_affected in POPULATION_RESIDENCES
         assert 100 >= percentage_increase >= 0
-        self.population[type_pop_affected] += POPULATION_RESIDENCES[type_pop_affected] * number_buildings_affected * (percentage_increase / 100)
+        self.residences[type_pop_affected] += POPULATION_RESIDENCES[type_pop_affected] * number_buildings_affected * (percentage_increase / 100)
 
     def apply_item_modifier_absolute(self, type_pop_affected: str, number_buildings_affected: int, absolute_increase: int):
         raise NotImplemented
@@ -343,9 +345,9 @@ class Island:
         for building in CONSUMABLES_BUILDINGS.values():
             # for each consumer
             for consumer in building.consumers.keys():
-                if self.population[consumer] == 0:
+                if self.residences[consumer] == 0:
                     continue  # No need to do any calculations if no pop on this island
-                number_required = self.population[consumer] / building.consumers[consumer]
+                number_required = self.residences[consumer] / building.consumers[consumer]
                 self.add_required_building(building_required=building.name, number_required=number_required * GLOBAL_CONSUMPTION_MODIFIER)
 
         # for each construction resource building
@@ -432,7 +434,7 @@ class Island:
                     if self.fertility[needed_fertility] < number_required:  # If we need more than island can provide
                         # Import the difference
                         extra_required = number_required - self.fertility[needed_fertility]
-                        extra_required = math.ceil(extra_required*10)/10
+                        extra_required = math.ceil(extra_required * 10) / 10
                         assert extra_required > 0
                         self.get_imported_good(building_required, extra_required)
                         number_required -= extra_required
@@ -447,11 +449,11 @@ class Island:
                 assert self.fertility[needed_fertility] >= 0
         self.required_buildings[building_required] += number_required
 
-    def required_residence_buildings(self) -> dict:
-        results = {}
-        for pop in self.population:
-            results[pop] = math.ceil(self.population[pop] / POPULATION_RESIDENCES[pop])
-        return results
+    # def required_residence_buildings(self) -> dict:
+    #     results = {}
+    #     for pop in self.residences:
+    #         results[pop] = math.ceil(self.residences[pop] / POPULATION_RESIDENCES[pop])
+    #     return results
 
     def display_required(self) -> None:
 
@@ -464,27 +466,27 @@ class Island:
             for island_to in self.exports_to[building_name]:
                 total_exported += self.exports_to[building_name][island_to]  # Double check we are not exporting more than production capacity
                 self.exports_to[building_name][island_to] = math.ceil(self.exports_to[building_name][island_to])
-            try:
-                assert total_exported <= self.required_buildings[building_name]
-            except AssertionError:
-                raise AssertionError(
-                    f"{self.name} is trying to export {total_exported} {building_name} but only produces {self.required_buildings[building_name]}")
+            # try:
+            #     assert total_exported <= self.required_buildings[building_name]
+            # except AssertionError:
+            #     raise AssertionError(
+            #         f"{self.name} is trying to export {total_exported} {building_name} but only produces {self.required_buildings[building_name]}")
 
         print("--- Required resource buildings ---")
         for item in self.required_buildings:
             if self.required_buildings[item] > 0:
                 print(f"{item} : {self.required_buildings[item]}")
-        res = self.required_residence_buildings()
         if len(self.exports_to) > 0:
             print("--- Trade routes ---")
             for item in self.exports_to:
                 for island_to in self.exports_to[item]:
                     print(f"Export {self.exports_to[item][island_to]} {item} to {island_to}")
 
-        print("--- Required residences ---")
-        for item in res:
-            if res[item] > 0:
-                print(f"{item} : {res[item]}")
+        # res = self.required_residence_buildings()
+        # print("--- Required residences ---")
+        # for item in res:
+        #     if res[item] > 0:
+        #         print(f"{item} : {res[item]}")
         print("\n")
 
     def modify_for_powered_buildings(self):
@@ -533,14 +535,14 @@ if __name__ == "__main__":
                                                "fur_dealer": 2, "sewing_machine": 2, "concrete": 2,
                                                "windows": 1, "iron_mine": 2, "coal_mine": 1,
                                                "spectacle": 1, "glass": 1, "brass": 1, "cannery": 1, "kitchen": 1})
-    ditchwater.population["farmers"] = 16 * 10 * 10  # Blocks * houses in block * residents in house
-    ditchwater.population["workers"] = 14 * 10 * 20
-    ditchwater.population["artisans"] = 3 * 10 * 30
-    ditchwater.population["engineers"] = 4 * 10 * 40
+    ditchwater.residences["farmers"] = 16 * 10  # Blocks * houses in block
+    ditchwater.residences["workers"] = 14 * 10
+    ditchwater.residences["artisans"] = 3 * 10
+    ditchwater.residences["engineers"] = 4 * 10
     # ditchwater.apply_item_modifier_percentage("farmers", , 20)
-    ditchwater.apply_item_modifier_percentage("workers", 23, 20)
-    ditchwater.apply_item_modifier_percentage("artisans", 23, 20)
-    ditchwater.apply_item_modifier_percentage("engineers", number_buildings_affected=46, percentage_increase=20)
+    # ditchwater.apply_item_modifier_percentage("workers", 23, 20)
+    # ditchwater.apply_item_modifier_percentage("artisans", 23, 20)
+    # ditchwater.apply_item_modifier_percentage("engineers", number_buildings_affected=46, percentage_increase=20)
 
     ditchwater.requested_construction_buildings["sawmill"] = 2
     ditchwater.requested_construction_buildings["brick"] = 4
@@ -552,13 +554,11 @@ if __name__ == "__main__":
     ditchwater.requested_construction_buildings["heavy_weapons"] = 1
     ditchwater.requested_construction_buildings["motors"] = 1
 
-
-
     glanther = Island(name="Glanther", fertility={"potato": None, "hops": None, "saltpeter": None,
                                                   "iron_mine": 1, "coal_mine": 4, "copper": 1},
-                      exports={"hops": None, "copper": 1, "saltpeter": None},
+                      exports={"hops": None, "copper": 1, "saltpeter": None, "iron_mine": 1},
                       world=world)
-    glanther.population["farmers"] = 6 * 10 * 10
+    glanther.residences["farmers"] = 6 * 10 * 10
 
     skidbjerg = Island(name="Skidbjerg", fertility={"hops": None, "peppers": None, "furs": None,
                                                     "clay": 1, "iron_mine": 2, "coal_mine": 2, "zinc": 2},
@@ -567,18 +567,18 @@ if __name__ == "__main__":
                                 "zinc": 2
                                 },
                        world=world)
-    skidbjerg.population["farmers"] = 6 * 10 * 10
-    skidbjerg.population["workers"] = 5 * 20 * 10
+    skidbjerg.residences["farmers"] = 6 * 10
+    skidbjerg.residences["workers"] = 5 * 20
     skidbjerg.requested_construction_buildings["sawmill"] = 1
     skidbjerg.requested_construction_buildings["brick"] = 1
 
     # *** New world ***
     la_isla = Island(name="La Isla", fertility={"plantain": None, "sugar": None, "corn": None, "coffee": None,
                                                 "clay": 3, "oil": 8, "gold": 2},
-                     exports={"rum": None, "fried_plantain": None, "tortilla": None, "coffee_roaster": None},
+                     exports={"rum": None, "fried_plantain": None, "tortilla": None, "coffee_roaster": None, "gold_mine": 2},
                      world=world)
-    la_isla.population["jornaleros"] = 7 * 10 * 10
-    la_isla.population["obreros"] = 8 * 20 * 10
+    la_isla.residences["jornaleros"] = 7 * 10
+    la_isla.residences["obreros"] = 8 * 20
     la_isla.requested_construction_buildings["sawmill"] = 1
     la_isla.requested_construction_buildings["brick"] = 1
 
@@ -586,15 +586,26 @@ if __name__ == "__main__":
                                                "clay": 5, "oil": 11},
                        exports={"cotton_mill": None, "tobacco": None},
                        world=world)
-    fechiques.population["jornaleros"] = 5 * 10 * 10
-    fechiques.population["obreros"] = 3 * 20 * 10
+    fechiques.residences["jornaleros"] = 5 * 10
+    fechiques.residences["obreros"] = 3 * 20
 
+    prosperity = Island(name="Prosperity", fertility={"plantain": None, "cotton": None, "corn": None, "caoutchouc": None,
+                                                      "clay": 2, "oil": 13, "gold": 3},
+                        exports={"caoutchouc": None},
+                        world=world)
+    prosperity.residences["jornaleros"] = 2 * 10
+    prosperity.residences["obreros"] = 3 * 10
+
+    # *** Gibralta ***
     crown_falls = Island("Crown Falls", fertility={"potato": None, "grain": None, "hops": None, "grapes": None,
                                                    "clay": 4, "iron_mine": 9, "coal_mine": 7, "zinc": 3, "copper": 4, "limestone": 3, "oil": 5},
                          exports={},
                          world=world)
-    crown_falls.population["farmers"] = 7 * 10 * 10
+    crown_falls.residences["farmers"] = 8 * 10
+    crown_falls.residences["workers"] = 8 * 10
     crown_falls.requested_construction_buildings["sawmill"] = 2
+    crown_falls.requested_construction_buildings["brick"] = 2
+
 
     for island in world:
         island.calculate_required_production_buildings()
@@ -604,4 +615,6 @@ if __name__ == "__main__":
     skidbjerg.display_required()
     la_isla.display_required()
     fechiques.display_required()
+    prosperity.display_required()
     crown_falls.display_required()
+
