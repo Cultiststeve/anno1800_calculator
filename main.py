@@ -172,6 +172,19 @@ BRASS = ProductionBuilding(name="brass",
 SPECTACLE = ProductionBuilding(name="spectacle",
                                requires={"brass": 2/3, "glass": 1/3},
                                consumers={"engineers": 9000/3, "investors": 5625/3})
+SALTPETER = ProductionBuilding(name="saltpeter",
+                               needs_fertility="saltpeter")
+DYNAMITE = ProductionBuilding(name="dynamite",
+                              requires={"rendering": 4/4, "saltpeter": 8/4})
+HEAVY_WEAPONS = ProductionBuilding(name="heavy_weapons",
+                                   requires={"furnace": 2/4, "dynamite": 4/4})
+CAOUTCHOUC = ProductionBuilding(name="caoutchouc",
+                                needs_fertility="caoutchouc")
+PENNY_FARTHINGS = ProductionBuilding(name="penny_farthings",
+                                     requires={"caoutchouc": 1/4, "furnace": 2/4},
+                                     consumers={"engineers": 6400, "investors": 4000})
+MOTORS = ProductionBuilding(name="motors",
+                            requires={"furnace": 2/3, "brass": 4/3})
 
 CONSUMABLES_BUILDINGS = {"fishery": FISHERY,
                          "potato": POTATO,
@@ -225,7 +238,12 @@ CONSUMABLES_BUILDINGS = {"fishery": FISHERY,
                          "copper": COPPER,
                          "zinc": ZINC,
                          "brass": BRASS,
-                         "spectacle": SPECTACLE
+                         "saltpeter": SALTPETER,
+                         "spectacle": SPECTACLE,
+                         "dynamite": DYNAMITE,
+                         # "caoutchouc": CAOUTCHOUC,
+                         # "penny_farthings": PENNY_FARTHINGS
+                         # "filament": FILAMENT
                          }
 
 
@@ -235,20 +253,23 @@ CONSTRUCTION_MATERIAL_BUILDINGS = {"sawmill": SAWMILL,
                                    "steel_works": STEEL_WORKS,
                                    "weapons": WEAPONS,
                                    "windows": WINDOWS,
-                                   "concrete": CONCRETE}
+                                   "concrete": CONCRETE,
+                                   "heavy_weapons": HEAVY_WEAPONS,
+                                   "motors": MOTORS}
 
 ALL_BUILDINGS = {}
 ALL_BUILDINGS.update(CONSUMABLES_BUILDINGS)
 ALL_BUILDINGS.update(CONSTRUCTION_MATERIAL_BUILDINGS)
 
 
-NATURAL_RESOURCES = ["coal_mine", "iron_mine", "clay", "copper", "oil_field", "gold", "zinc", "limestone",
+NATURAL_RESOURCES = ["coal_mine", "iron_mine", "clay", "copper", "oil", "gold", "zinc", "limestone",
                      "hops", "grain", "potato", "peppers", "furs", "saltpeter", "grapes",
                      "cotton", "plantain", "sugar", "corn", "coffee", "caoutchouc", "tobacco", "cocoa"]
 
 
 class Island:
-    def __init__(self, name: str, fertility: dict, exports: dict, world: set()):
+    def __init__(self, name: str, world: set(),
+                 fertility: dict = {}, electrified_buildings: dict = {}, exports: dict = {}):
         """
 
         Args:
@@ -258,6 +279,7 @@ class Island:
             exports: list of buildings it will export the resources from, if requested
                 will not export if doesnt have fertility cap
         """
+        self.electrified_buildings = electrified_buildings
         self.world = world
         self.world.add(self)
         self.name = name
@@ -343,6 +365,7 @@ class Island:
                     self.required_buildings["coal_mine"] = self.required_buildings["charcoal_kiln"] / 2
                     self.required_buildings["charcoal_kiln"] = 0
 
+        self.modify_for_powered_buildings()
 
     def get_imported_good(self, building_required: str, number_required: float):
         for exporter_island in self.world:
@@ -409,6 +432,7 @@ class Island:
                     if self.fertility[needed_fertility] < number_required:  # If we need more than island can provide
                         # Import the difference
                         extra_required = number_required - self.fertility[needed_fertility]
+                        extra_required = math.ceil(extra_required*10)/10
                         assert extra_required > 0
                         self.get_imported_good(building_required, extra_required)
                         number_required -= extra_required
@@ -463,6 +487,15 @@ class Island:
                 print(f"{item} : {res[item]}")
         print("\n")
 
+    def modify_for_powered_buildings(self):
+        for building in self.electrified_buildings:
+            assert building in ALL_BUILDINGS
+            assert self.electrified_buildings[building] > 0
+            assert self.required_buildings[building] > 0
+            self.required_buildings[building] -= self.electrified_buildings[building]
+            if self.required_buildings[building] < 1:
+                self.required_buildings[building] = 1  # Always need 1
+
 
 def do_producers_have_fert_requirements(building_name: str) -> set:
     """
@@ -486,31 +519,44 @@ def do_producers_have_fert_requirements(building_name: str) -> set:
     return fert_requirements
 
 
-GLOBAL_CONSUMPTION_MODIFIER = .8
+GLOBAL_CONSUMPTION_MODIFIER = .8 * 1.15  # Newspaper * newspaper prop modifier
 
 if __name__ == "__main__":
     world = set()
 
     ditchwater = Island(name="Ditchwater", fertility={"grain": None, "potato": None, "peppers": None,
-                                                      "iron_mine": 2, "coal_mine": 1, "clay": 3},
+                                                      "iron_mine": 2, "coal_mine": 1, "clay": 3,
+                                                      "zinc": 1, "copper": 1, "limestone": 2, "oil": 4},
                         exports={"schnapps": None, "brewery": None, "sewing_machine": None, "bakery": None},
-                        world=world)
+                        world=world,
+                        electrified_buildings={"steel_works": 2, "furnace": 5,
+                                               "fur_dealer": 2, "sewing_machine": 2, "concrete": 2,
+                                               "windows": 1, "iron_mine": 2, "coal_mine": 1,
+                                               "spectacle": 1, "glass": 1, "brass": 1, "cannery": 1, "kitchen": 1})
     ditchwater.population["farmers"] = 16 * 10 * 10  # Blocks * houses in block * residents in house
-    ditchwater.population["workers"] = 13 * 10 * 20
-    ditchwater.population["artisans"] = 5 * 10 * 30
-    ditchwater.population["engineers"] = 2 * 10 * 40
-    ditchwater.apply_item_modifier_percentage("workers", 56, 20)
-    ditchwater.apply_item_modifier_percentage("artisans", 36, 20)
-    ditchwater.requested_construction_buildings["sawmill"] = 4
-    ditchwater.requested_construction_buildings["brick"] = 6
+    ditchwater.population["workers"] = 14 * 10 * 20
+    ditchwater.population["artisans"] = 3 * 10 * 30
+    ditchwater.population["engineers"] = 4 * 10 * 40
+    # ditchwater.apply_item_modifier_percentage("farmers", , 20)
+    ditchwater.apply_item_modifier_percentage("workers", 23, 20)
+    ditchwater.apply_item_modifier_percentage("artisans", 23, 20)
+    ditchwater.apply_item_modifier_percentage("engineers", number_buildings_affected=46, percentage_increase=20)
+
+    ditchwater.requested_construction_buildings["sawmill"] = 2
+    ditchwater.requested_construction_buildings["brick"] = 4
     ditchwater.requested_construction_buildings["sailmaker"] = 1
-    ditchwater.requested_construction_buildings["steel_works"] = 2
-    ditchwater.requested_construction_buildings["weapons"] = 3
+    ditchwater.requested_construction_buildings["steel_works"] = 1
+    ditchwater.requested_construction_buildings["weapons"] = 1
     ditchwater.requested_construction_buildings["windows"] = 1
+    ditchwater.requested_construction_buildings["concrete"] = 2
+    ditchwater.requested_construction_buildings["heavy_weapons"] = 1
+    ditchwater.requested_construction_buildings["motors"] = 1
+
+
 
     glanther = Island(name="Glanther", fertility={"potato": None, "hops": None, "saltpeter": None,
                                                   "iron_mine": 1, "coal_mine": 4, "copper": 1},
-                      exports={"hops": None, "copper": 1},
+                      exports={"hops": None, "copper": 1, "saltpeter": None},
                       world=world)
     glanther.population["farmers"] = 6 * 10 * 10
 
@@ -521,27 +567,34 @@ if __name__ == "__main__":
                                 "zinc": 2
                                 },
                        world=world)
-    skidbjerg.population["farmers"] = 5 * 10 * 10
-    skidbjerg.population["workers"] = 3 * 20 * 10
+    skidbjerg.population["farmers"] = 6 * 10 * 10
+    skidbjerg.population["workers"] = 5 * 20 * 10
     skidbjerg.requested_construction_buildings["sawmill"] = 1
     skidbjerg.requested_construction_buildings["brick"] = 1
 
     # *** New world ***
     la_isla = Island(name="La Isla", fertility={"plantain": None, "sugar": None, "corn": None, "coffee": None,
-                                                "clay": 3, "oil_field": 8, "gold": 2},
+                                                "clay": 3, "oil": 8, "gold": 2},
                      exports={"rum": None, "fried_plantain": None, "tortilla": None, "coffee_roaster": None},
                      world=world)
     la_isla.population["jornaleros"] = 7 * 10 * 10
-    la_isla.population["obreros"] = 5 * 20 * 10
+    la_isla.population["obreros"] = 8 * 20 * 10
     la_isla.requested_construction_buildings["sawmill"] = 1
     la_isla.requested_construction_buildings["brick"] = 1
 
-    Fechiques = Island("Fechiques", fertility={"sugar": None, "cotton": None, "cocoa": None, "coffee": None, "tobacco": None,
-                                               "clay": 5, "oil_field": 11},
+    fechiques = Island("Fechiques", fertility={"sugar": None, "cotton": None, "cocoa": None, "coffee": None, "tobacco": None,
+                                               "clay": 5, "oil": 11},
                        exports={"cotton_mill": None, "tobacco": None},
                        world=world)
-    Fechiques.population["jornaleros"] = 4 * 10 * 10
-    Fechiques.population["obreros"] = 3 * 20 * 10
+    fechiques.population["jornaleros"] = 5 * 10 * 10
+    fechiques.population["obreros"] = 3 * 20 * 10
+
+    crown_falls = Island("Crown Falls", fertility={"potato": None, "grain": None, "hops": None, "grapes": None,
+                                                   "clay": 4, "iron_mine": 9, "coal_mine": 7, "zinc": 3, "copper": 4, "limestone": 3, "oil": 5},
+                         exports={},
+                         world=world)
+    crown_falls.population["farmers"] = 7 * 10 * 10
+    crown_falls.requested_construction_buildings["sawmill"] = 2
 
     for island in world:
         island.calculate_required_production_buildings()
@@ -550,4 +603,5 @@ if __name__ == "__main__":
     glanther.display_required()
     skidbjerg.display_required()
     la_isla.display_required()
-    Fechiques.display_required()
+    fechiques.display_required()
+    crown_falls.display_required()

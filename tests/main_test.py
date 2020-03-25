@@ -504,3 +504,16 @@ def test_import_some_iron(example_island: main.Island):
     example_island.calculate_required_production_buildings()
     assert example_island.required_buildings["iron_mine"] == 1
     assert iron_isle.required_buildings["iron_mine"] == 1
+
+
+def test_electrisity_modifier(example_island: main.Island):
+    example_island.required_buildings["steel_works"] = 1
+    example_island.required_buildings["fur_dealer"] = 2
+    example_island.required_buildings["heavy_weapons"] = 5
+    example_island.required_buildings["furnace"] = .5
+    example_island.electrified_buildings = {"steel_works": 1, "heavy_weapons": 2, "fur_dealer": 1, "furnace": 1}
+    example_island.modify_for_powered_buildings()
+    assert example_island.required_buildings["steel_works"] == 1
+    assert example_island.required_buildings["fur_dealer"] == 1
+    assert example_island.required_buildings["heavy_weapons"] == 3
+    assert example_island.required_buildings["furnace"] == 1
