@@ -392,7 +392,7 @@ class Island:
                 continue  # Cant import from self
             if building_required in exporter_island.exports:
                 try:
-                    exporter_island.add_required_building(building_required, number_required)
+                    exporter_island.add_required_building(building_required, number_required, for_export=True)
                 except NoFertility:  # Cant export from this island, not enough fertility left
                     continue
                 # Add to exports list
@@ -412,11 +412,12 @@ class Island:
         else:
             raise NoFertility(f"{building_required} is required on {self.name} and not exported in sufficient quantity from any exporter island.")
 
-    def add_required_building(self, building_required: str, number_required: float):
+    def add_required_building(self, building_required: str, number_required: float, for_export: bool = False):
         """
         Adds providers for required building, then adds required building itself
 
         Args:
+            for_export:
             building_required: Building needed
             number_required:
 
@@ -449,11 +450,14 @@ class Island:
             if needed_fertility in self.fertility:  # If we have
                 if self.fertility[needed_fertility] is not None:  # If there is a limit on fertility
                     if self.fertility[needed_fertility] < number_required:  # If we need more than island can provide
+                        if for_export:  # Dont want import chains - raise error and let func try another isle
+                            raise NoFertility("Cant export from here, not enough capacity left")
                         # Import the difference
                         extra_required = number_required - self.fertility[needed_fertility]
                         assert extra_required > 0
                         self.get_imported_good(building_required, extra_required)
                         number_required -= extra_required
+                # else we continue and add building at end of func
             else:  # None on this island, import all
                 self.get_imported_good(building_required, number_required)
                 return
@@ -461,15 +465,11 @@ class Island:
         # Add these buildings to required (now we have all requirements)
         if needed_fertility is not None:
             if self.fertility[needed_fertility] is not None:  # If there is a limit on fertility
+                assert number_required <= self.fertility[needed_fertility]
                 self.fertility[needed_fertility] -= number_required
-                assert self.fertility[needed_fertility] >= -.1
+                assert self.fertility[needed_fertility] >= 0
         self.required_buildings[building_required] += number_required
 
-    # def required_residence_buildings(self) -> dict:
-    #     results = {}
-    #     for pop in self.residences:
-    #         results[pop] = math.ceil(self.residences[pop] / POPULATION_RESIDENCES[pop])
-    #     return results
 
     def display_required(self) -> None:
 
@@ -511,8 +511,8 @@ class Island:
             assert self.electrified_buildings[building] > 0
             assert self.required_buildings[building] > 0
             self.required_buildings[building] -= self.electrified_buildings[building]
-            if self.required_buildings[building] < 1:
-                self.required_buildings[building] = 1  # Always need 1
+            if self.required_buildings[building] < .1:
+                self.required_buildings[building] = .1  # Always need some capacity
 
 
 def do_producers_have_fert_requirements(building_name: str) -> set:

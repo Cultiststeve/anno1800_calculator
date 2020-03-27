@@ -464,15 +464,6 @@ def test_new_world_pop_beer_export(example_island: main.Island):
     assert math.ceil(hop_isle.required_buildings["hops"]) == 1
 
 
-@pytest.mark.parametrize("example_numbers", [[100, 1, 100, 110], [1000, 10, 10, 1010]])
-def test_percentage_increase(example_island: main.Island, example_numbers):
-    example_island.residences["farmers"] = example_numbers[0]
-    example_island.apply_item_modifier_percentage(type_pop_affected="farmers",
-                                                  number_buildings_affected=example_numbers[1],
-                                                  percentage_increase=example_numbers[2])
-    assert example_island.residences["farmers"] == example_numbers[3]
-
-
 def test_global_production_modifier(example_island: main.Island):
     main.GLOBAL_CONSUMPTION_MODIFIER = .5
     example_island.residences["farmers"] = 80
@@ -518,3 +509,22 @@ def test_electrisity_modifier(example_island: main.Island):
     assert example_island.required_buildings["fur_dealer"] == 1
     assert example_island.required_buildings["heavy_weapons"] == 3
     assert example_island.required_buildings["furnace"] == 1
+
+
+def test_export_too_much_iron():
+    exporter_isle = main.Island(name="exporter-isle", world=set(),
+                                fertility={"iron_mine": 1},
+                                exports={"iron_mine": 1})
+
+    isle_one = main.Island(name="i1", world=exporter_isle.world)
+    isle_one.requested_construction_buildings["steel_works"] = 3
+    isle_two = main.Island(name="i2", world=exporter_isle.world)
+    isle_two.requested_construction_buildings["steel_works"] = 3
+
+    isle_iron_spare = main.Island(name="ironspare", fertility={"iron_mine": 1}, exports={"iron_mine": 1}, world=exporter_isle.world)
+
+    exporter_isle.calculate_required_production_buildings()
+    isle_one.calculate_required_production_buildings()
+    isle_two.calculate_required_production_buildings()
+    assert exporter_isle.required_buildings["iron_mine"] <= 1
+    assert isle_iron_spare.required_buildings["iron_mine"] <= 1
