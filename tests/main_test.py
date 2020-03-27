@@ -42,7 +42,6 @@ def test_all_buildings_in_lists():
     assert len(main.ALL_BUILDINGS) == len(main.CONSUMABLES_BUILDINGS) + len(main.CONSTRUCTION_MATERIAL_BUILDINGS)
 
 
-
 def test_names_correct():
     for building in main.ALL_BUILDINGS:
         assert building == main.ALL_BUILDINGS[building].name
@@ -126,7 +125,7 @@ def remove_brewery():
 
 
 # num workers, num bakerys, num flours,
-@pytest.mark.parametrize("example_numbers", [[1, 1, 1], [110/2, 1, 1], [110, 2, 1], [111, 3, 2]])
+@pytest.mark.parametrize("example_numbers", [[1, 1, 1], [110 / 2, 1, 1], [110, 2, 1], [111, 3, 2]])
 def test_bread_chain(example_island, remove_brewery, example_numbers):
     # Pretend no beer
     example_island.residences["workers"] = example_numbers[0]
@@ -144,7 +143,7 @@ def test_sawmill(example_island, example_numbers):
 
 
 # number workers, number pig farms, number slaughterhouses, num soap factories
-@pytest.mark.parametrize("example_numbers", [[1, 1, 1, 1], [241, 5+2, 5, 2]])
+@pytest.mark.parametrize("example_numbers", [[1, 1, 1, 1], [241, 5 + 2, 5, 2]])
 def test_sausages_and_soap(example_island, example_numbers):
     example_island.residences["workers"] = example_numbers[0]
     example_island.calculate_required_production_buildings()
@@ -268,7 +267,7 @@ def test_export_hops_sucess():
 def test_export_to_sucess():
     world = set()
     main_island = main.Island(name="main-isle", fertility={"potato": None, "grain": None}, exports={}, world=world)
-    main_island.residences["workers"] = (130/2) * 2/3  # number of workers that means 1 hop field required
+    main_island.residences["workers"] = (130 / 2) * 2 / 3  # number of workers that means 1 hop field required
     hop_island = main.Island(name="hop-isle", fertility={"hops": None}, exports={"hops": None}, world=world)
     main_island.calculate_required_production_buildings()
     assert len(hop_island.exports_to) == 1
@@ -278,7 +277,7 @@ def test_export_to_sucess():
 def test_export_to_sucess_many(set_global_modifier_1):
     world = set()
     main_island = main.Island(name="main-isle", fertility={"potato": None, "grain": None}, exports={}, world=world)
-    main_island.residences["workers"] = (130/2) * (2 / 3) * 5  # number of workers that means 5 hop field required
+    main_island.residences["workers"] = (130 / 2) * (2 / 3) * 5  # number of workers that means 5 hop field required
     hop_island = main.Island(name="hop-isle", fertility={"hops": None}, exports={"hops": None}, world=world)
     main_island.calculate_required_production_buildings()
     assert len(hop_island.exports_to) == 1
@@ -528,3 +527,13 @@ def test_export_too_much_iron():
     isle_two.calculate_required_production_buildings()
     assert exporter_isle.required_buildings["iron_mine"] <= 1
     assert isle_iron_spare.required_buildings["iron_mine"] <= 1
+
+
+def test_must_import(example_island: main.Island):
+    example_island.must_import = {"fishery"}
+    example_island.residences["farmers"] = 100
+    fish_isle = main.Island(name="fish", exports={"fishery": None}, world=example_island.world)
+    example_island.calculate_required_production_buildings()
+    fish_isle.calculate_required_production_buildings()
+    assert example_island.required_buildings["fishery"] == 0
+    assert fish_isle.required_buildings["fishery"] > 0
